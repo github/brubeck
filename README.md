@@ -83,7 +83,7 @@ The JSON file can contain the following sections:
 - `http`: if existing, this string sets the listen address and port for the HTTP API
     
 - `backends`: an array of the different backends to load. If more than one backend is loaded,
-    metricsd will function in sharding mode, distributing aggregation load evenly through all
+    brubeck will function in sharding mode, distributing aggregation load evenly through all
     the different backends through constant-hashing.
 
     -   `carbon`: a backend that aggregates data into a Carbon cache. The backend sends all the
