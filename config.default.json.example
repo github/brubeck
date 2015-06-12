@@ -1,8 +1,8 @@
 {
-  "logfile" : "./log/metricsd.log",
+  "logfile" : "./log/brubeck.log",
   "sharding" : false,
-  "server_name" : "metricsd_debug",
-  "dumpfile" : "./metricsd.dump",
+  "server_name" : "brubeck_debug",
+  "dumpfile" : "./brubeck.dump",
   "capacity" : 15,
   "expire" : 5,
   "http" : "127.0.0.1:8080",
