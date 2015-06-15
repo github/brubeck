@@ -21,7 +21,7 @@
 	|| defined(__ARM_ARCH_7S__) || defined(__aarch64__)
 #define cpu_relax() __asm__ volatile("yield\n": : :"memory")
 #else
-#define cpu_relax()
+#define cpu_relax() break
 #endif
 
 /* Atomic exchange (of various sizes) */
