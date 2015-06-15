@@ -108,7 +108,7 @@ The JSON file can contain the following sections:
 
         Hmmmm pickles. Now I'm hungry. Lincoln when's lunch?
 
-- `samplers`: an array of the different samplers to load. Samplers run on paralel and gather
+- `samplers`: an array of the different samplers to load. Samplers run on parallel and gather
 incoming metrics from the network.
 
     -  `statsd`: the default statsd-compatible sampler. It listens on an UDP port for metrics
