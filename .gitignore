@@ -1,0 +1,6 @@
+brubeck
+*.o
+*.swp
+*~
+.DS_Store
+build/*

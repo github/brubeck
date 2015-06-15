@@ -1,0 +1,4 @@
+#!/bin/sh
+
+ROOT=$(dirname "$0")/..
+cd "$ROOT" && git submodule update --init && make brubeck

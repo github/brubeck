@@ -1,0 +1,3 @@
+[submodule "vendor/ck"]
+	path = vendor/ck
+	url = https://github.com/concurrencykit/ck
