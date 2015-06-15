@@ -18,7 +18,6 @@ SOURCES = \
 	src/histogram.c \
 	src/ht.c \
 	src/http.c \
-	src/http/mongoose.c \
 	src/internal_sampler.c \
 	src/log.c \
 	src/metric.c \
@@ -29,6 +28,11 @@ SOURCES = \
 	src/setproctitle.c \
 	src/slab.c \
 	src/utils.c
+
+ifdef BRUBECK_HTTP
+	SOURCES += src/http/mongoose.c
+	CFLAGS += -DBRUBECK_HAVE_MONGOOSE
+endif
 
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
 HEADERS = $(wildcard src/*.h) $(wildcard src/libcuckoo/*.h)

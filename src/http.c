@@ -1,4 +1,6 @@
 #include "brubeck.h"
+
+#ifdef BRUBECK_HAVE_MONGOOSE
 #include "http/mongoose.h"
 #include "jansson.h"
 
@@ -213,3 +215,13 @@ void brubeck_http_endpoint_init(struct brubeck_server *server, const char *liste
 	mg_set_option(mongoose, "listening_port", listen);
 	pthread_create(&server->stats.thread, NULL, &stats_thread, mongoose);
 }
+
+#else
+
+void brubeck_http_endpoint_init(struct brubeck_server *server, const char *listen)
+{
+	die("http support has not been compiled in Brubeck");
+}
+
+#endif
+
