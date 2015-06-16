@@ -34,6 +34,8 @@ Brubeck has the following dependencies:
 
 - OpenSSL (`libcrypto`) if you're building StatsD-Secure support
 
+- libmicrohttpd (`libmicrohttpd-dev`) to have an internal HTTP stats endpoint. Build with `BRUBECK_NO_HTTP` to disable this.
+
 Build brubeck by typing:
 
     ./script/bootstrap
@@ -53,6 +55,15 @@ Brubeck answers to the following signals:
 - `SIGHUP`: reopen the log files (in case you're using logrotate or an equivalent)
 - `SIGUSR2`: dump a newline-separated list of all the metrics currently aggregated by the
     daemon and their types.
+
+### HTTP Endpoint
+
+If enabled on the config file, Brubeck can provide an HTTP API to poll its status. The following routes are available:
+
+- `GET /ping`: return a short JSON payload with the current status of the daemon (just to check it's up)
+- `GET /stats`: get a large JSON payload with full statistics, including active endpoints and throughputs
+- `GET /metric/{{metric_name}}`: get the current status of a metric, if it's being aggregated
+- `POST /expire/{{metric_name}}`: expire a metric that is no longer being reported to stop it from being aggregated to the backend
 
 ## Configuration
 
