@@ -54,6 +54,15 @@ Brubeck answers to the following signals:
 - `SIGUSR2`: dump a newline-separated list of all the metrics currently aggregated by the
     daemon and their types.
 
+### HTTP Endpoint
+
+If enabled on the config file, Brubeck can provide an HTTP API to poll its status. The following routes are available:
+
+- `GET /ping`: return a short JSON payload with the current status of the daemon (just to check it's up)
+- `GET /stats`: get a large JSON payload with full statistics, including active endpoints and throughputs
+- `GET /metric/{{metric_name}}`: get the current status of a metric, if it's being aggregated
+- `POST /expire/{{metric_name}}`: expire a metric that is no longer being reported to stop it from being aggregated to the backend
+
 ## Configuration
 
 The configuration for Brubeck is loaded through a JSON file, passed on the commandline.
