@@ -1,44 +1,30 @@
 #include "brubeck.h"
 
-#ifdef BRUBECK_HAVE_MONGOOSE
-#include "http/mongoose.h"
+#ifdef BRUBECK_HAVE_MICROHTTPD
+#include "microhttpd.h"
 #include "jansson.h"
-
-static int dump_json(const char *buffer, size_t size, void *data)
-{
-	struct mg_connection *conn = data;
-	mg_send_data(conn, buffer, (int)size);
-	return 0;
-}
-
-static void send_headers(struct mg_connection *conn)
-{
-	mg_send_status(conn, 200);
-	mg_send_header(conn, "Connection", "close");
-	mg_send_header(conn, "Content-Type", "application/json");
-}
 
 static struct brubeck_metric *safe_lookup_metric(struct brubeck_server *server, const char *key)
 {
 	return brubeck_hashtable_find(server->metrics, key, (uint16_t)strlen(key));
 }
 
-static int expire_metric(struct mg_connection *conn)
+static struct MHD_Response *
+expire_metric(struct brubeck_server *server, const char *url)
 {
-	struct brubeck_server *server = conn->server_param;
 	struct brubeck_metric *metric = safe_lookup_metric(
-			server, conn->uri + strlen("/expire/"));
+			server, url + strlen("/expire/"));
 
 	if (metric) {
 		metric->expire = BRUBECK_EXPIRE_DISABLED;
-		mg_send_status(conn, 200);
-		mg_send_header(conn, "Connection", "close");
-		return MG_TRUE;
+		return MHD_create_response_from_data(
+				0, "", 0, 0);
 	}
-	return MG_FALSE;
+	return NULL;
 }
 
-static int send_metric(struct mg_connection *conn)
+static struct MHD_Response *
+send_metric(struct brubeck_server *server, const char *url)
 {
 	static const char *metric_types[] = {
 		"gauge", "meter", "counter", "histogram", "timer", "internal"
@@ -47,9 +33,8 @@ static int send_metric(struct mg_connection *conn)
 		"disabled", "inactive", "active"
 	};
 
-	struct brubeck_server *server = conn->server_param;
 	struct brubeck_metric *metric = safe_lookup_metric(
-			server, conn->uri + strlen("/metric/"));
+			server, url + strlen("/metric/"));
 
 	if (metric) {
 		json_t *mj = json_pack("{s:s, s:s, s:i, s:s}",
@@ -63,19 +48,19 @@ static int send_metric(struct mg_connection *conn)
 			"expire", expire_status[metric->expire]
 		);
 
-		send_headers(conn);
-		json_dump_callback(mj, &dump_json, (void *)conn,
-				JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+		char *jsonr = json_dumps(mj, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 		json_decref(mj);
-		return MG_TRUE;
+		return MHD_create_response_from_data(
+				strlen(jsonr), jsonr, 1, 0);
 	}
 
-	return MG_FALSE;
+	return NULL;
 }
 
-static int send_stats(struct mg_connection *conn)
+static struct MHD_Response *
+send_stats(struct brubeck_server *brubeck)
 {
-	struct brubeck_server *brubeck = conn->server_param;
+	char *jsonr;
 	json_t *stats, *secure, *backends, *samplers;
 	int i;
 	
@@ -141,79 +126,80 @@ static int send_stats(struct mg_connection *conn)
 		"backends", backends,
 		"samplers", samplers);
 
-	json_dump_callback(stats, &dump_json, (void *)conn,
-		JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+	jsonr = json_dumps(stats, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 	json_decref(stats);
-
-	return MG_TRUE;
+	return MHD_create_response_from_data(
+		strlen(jsonr), jsonr, 1, 0);
 }
 
-static int handle_request(struct mg_connection *conn)
+static int
+handle_request(void *cls, struct MHD_Connection *connection,
+		const char *url, const char *method,
+		const char *version, const char *upload_data,
+		size_t *upload_data_size, void **con_cls)
 {
-	static const char *PONG_STR =
-		"{\"version\" : \"brubeck %s\", \"pid\" : %d, \"status\" : \"%s\"}\n";
+	int ret;
+	struct MHD_Response *response = NULL;
+	struct brubeck_server *brubeck = cls;
 
-	if (!strcmp(conn->request_method, "GET")) {
-		if (!strcmp(conn->uri, "/ping")) {
-			struct brubeck_server *brubeck = conn->server_param;
-			const char *status = "OK";
+	if (!strcmp(method, "GET")) {
+		if (!strcmp(url, "/ping")) {
+			char *jsonr;
+			json_t *pong = json_pack("{s:s, s:i, s:s}",
+				"version", "brubeck " GIT_SHA,
+				"pid", (int)getpid(),
+				"status", "OK");
 
-			if (brubeck->at_capacity)
-				status = "CAPACITY";
-			if (!brubeck->running)
-				status = "SHUTDOWN";
-
-			send_headers(conn);
-			mg_printf_data(conn, PONG_STR, GIT_SHA, getpid(), status);
-			return MG_TRUE;
+			jsonr = json_dumps(pong, JSON_PRESERVE_ORDER);
+			response = MHD_create_response_from_data(strlen(jsonr), jsonr, 1, 0);
+			json_decref(pong);
 		}
 
-		if (!strcmp(conn->uri, "/stats"))
-			return send_stats(conn);
+		else if (!strcmp(url, "/stats"))
+			response = send_stats(brubeck);
 
-		if (starts_with(conn->uri, "/metric/"))
-			return send_metric(conn);
+		else if (starts_with(url, "/metric/"))
+			response = send_metric(brubeck, url);
+	}
+	else if (!strcmp(method, "POST")) {
+		if (starts_with(url, "/expire/"))
+			response = expire_metric(brubeck, url);
 	}
 
-	if (!strcmp(conn->request_method, "POST")) {
-		if (starts_with(conn->uri, "/expire/"))
-			return expire_metric(conn);
+	if (!response) {
+		static const char *NOT_FOUND = "404 not found";
+		response = MHD_create_response_from_data(
+			strlen(NOT_FOUND), (void *)NOT_FOUND, 0, 0);
+		MHD_add_response_header(response, "Connection", "close");
+		ret = MHD_queue_response(connection, 404, response);
+	} else {
+		MHD_add_response_header(response, "Connection", "close");
+		MHD_add_response_header(response, "Content-Type", "application/json");
+		ret = MHD_queue_response(connection, 200, response);
 	}
 
-	return MG_FALSE;
-}
-
-static int event_handler(struct mg_connection *conn, enum mg_event ev)
-{
-	switch (ev) {
-	case MG_AUTH:
-		return MG_TRUE;
-
-	case MG_REQUEST:
-		return handle_request(conn);
-
-	default:
-		return MG_FALSE;
-	}
-}
-
-static void *stats_thread(void *payload)
-{
-	struct mg_server *server = payload;
-
-	for (;;) {
-		mg_poll_server(server, 1000);   // Infinite loop, Ctrl-C to stop
-	}
-	mg_destroy_server(&server);
-	return NULL;
+	MHD_destroy_response(response);
+	return ret;
 }
 
 void brubeck_http_endpoint_init(struct brubeck_server *server, const char *listen)
 {
-	struct mg_server *mongoose = mg_create_server(server, event_handler);
+	struct MHD_Daemon *daemon;
 
-	mg_set_option(mongoose, "listening_port", listen);
-	pthread_create(&server->stats.thread, NULL, &stats_thread, mongoose);
+	const char *port = strrchr(listen, ':');
+	port = port ? port + 1 : listen;
+
+	daemon = MHD_start_daemon(
+			MHD_USE_SELECT_INTERNALLY,
+			atoi(port),
+			NULL, NULL,
+			&handle_request, server,
+			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int)10,
+			MHD_OPTION_END);
+
+	if (!daemon)
+		die("failed to start HTTP endpoint");
+	log_splunk("event=http_server listen=%s", port);
 }
 
 #else

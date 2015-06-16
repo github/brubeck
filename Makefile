@@ -29,9 +29,9 @@ SOURCES = \
 	src/slab.c \
 	src/utils.c
 
-ifdef BRUBECK_HTTP
-	SOURCES += src/http/mongoose.c
-	CFLAGS += -DBRUBECK_HAVE_MONGOOSE
+ifndef BRUBECK_NO_HTTP
+	LIBS += -lmicrohttpd
+	CFLAGS += -DBRUBECK_HAVE_MICROHTTPD
 endif
 
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
