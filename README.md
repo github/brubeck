@@ -34,6 +34,8 @@ Brubeck has the following dependencies:
 
 - OpenSSL (`libcrypto`) if you're building StatsD-Secure support
 
+- libmicrohttpd (`libmicrohttpd-dev`) to have an internal HTTP stats endpoint. Build with `BRUBECK_NO_HTTP` to disable this.
+
 Build brubeck by typing:
 
     ./script/bootstrap
