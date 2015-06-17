@@ -66,9 +66,6 @@ static inline void *xrealloc(void *ptr, size_t size)
 /* Compile read-write barrier */
 #define brubeck_barrier() __sync_synchronize()
 
-/* Pause instruction to prevent excess processor bus usage */
-#define brubeck_cpu_relax() __asm__ volatile("pause\n": : :"memory")
-
 /* Pause instruction to prevent excess processor bus usage (when possible) */
 #if defined(__i386) || defined(__x86_64__)
 #define brubeck_cpu_relax() __asm__ volatile("pause\n": : :"memory")
