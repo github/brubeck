@@ -77,7 +77,9 @@ static inline void *xrealloc(void *ptr, size_t size)
 	|| defined(__ARM_ARCH_7S__) || defined(__aarch64__)
 #define brubeck_cpu_relax() __asm__ volatile("yield\n": : :"memory")
 #else
-#define brubeck_cpu_relax() break
+/* Many OSes support it, but some require odd macros to get the declaration */
+int pthread_yield(void);
+#define brubeck_cpu_relax() pthread_yield ()
 #endif
 
 void initproctitle (int argc, char **argv);
