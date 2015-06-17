@@ -43,6 +43,20 @@ Build brubeck by typing:
 Other operating systems or kernels can probably build Brubeck too. More specifically,
 Brubeck has been seen to work under FreeBSD and OpenBSD, but this is not supported.
 
+## Supported Metric Types
+
+Brubeck supports most of the metric types from statsd and many other implementations.
+
+- `g` - Gauges
+- `c` - Meters
+- `C` - Counters
+- `h` - Histograms
+- `ms` - Timers (in milliseconds)
+
+Client-sent sampling rates are ignored.
+
+Visit the [statsd docs](https://github.com/etsy/statsd/blob/master/docs/metric_types.md) for more information on metric types.
+
 ## Interfacing
 
 The are several ways to interact with a running Brubeck daemon.
