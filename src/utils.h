@@ -64,10 +64,24 @@ static inline void *xrealloc(void *ptr, size_t size)
 #define brubeck_atomic_fetch(P) __sync_add_and_fetch((P), 0)
 
 /* Compile read-write barrier */
-#define brubeck_barrier() __asm__ volatile("": : :"memory")
+#define brubeck_barrier() __sync_synchronize()
 
 /* Pause instruction to prevent excess processor bus usage */
 #define brubeck_cpu_relax() __asm__ volatile("pause\n": : :"memory")
+
+/* Pause instruction to prevent excess processor bus usage (when possible) */
+#if defined(__i386) || defined(__x86_64__)
+#define brubeck_cpu_relax() __asm__ volatile("pause\n": : :"memory")
+#elif defined(__powerpc__) || defined(__ppc__) || defined(__PPC__) \
+	|| defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+#define brubeck_cpu_relax() __asm__ volatile("or 27,27,27\n": : :"memory")
+#elif defined(__ARM_ARCH_6T2__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) \
+	|| defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) \
+	|| defined(__ARM_ARCH_7S__) || defined(__aarch64__)
+#define brubeck_cpu_relax() __asm__ volatile("yield\n": : :"memory")
+#else
+#define brubeck_cpu_relax() break
+#endif
 
 void initproctitle (int argc, char **argv);
 int getproctitle(char **procbuffer);
