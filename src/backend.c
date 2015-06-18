@@ -45,6 +45,7 @@ static void *backend__thread(void *_ptr)
 
 void brubeck_backend_run_threaded(struct brubeck_backend *self)
 {
-	pthread_create(&self->thread, NULL, &backend__thread, self);
+	if (pthread_create(&self->thread, NULL, &backend__thread, self) != 0)
+		die("failed to start backend thread");
 }
 

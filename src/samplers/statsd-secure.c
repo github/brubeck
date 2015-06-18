@@ -196,7 +196,8 @@ brubeck_statsd_secure_new(struct brubeck_server *server, json_t *settings)
 	std->replays = multibloom_new(std->drift, replay_len, 0.001);
 	std->sampler.in_sock = brubeck_sampler_socket(&std->sampler, 0);
 
-	pthread_create(&std->thread, NULL, &statsd_secure__thread, std);
+	if (pthread_create(&std->thread, NULL, &statsd_secure__thread, std) != 0)
+		die("failed to start sampler thread");
 
 	return (struct brubeck_sampler *)std;
 }

@@ -282,7 +282,8 @@ static void run_worker_threads(struct brubeck_statsd *statsd)
 	statsd->workers = xmalloc(statsd->worker_count * sizeof(pthread_t));
 
 	for (i = 0; i < statsd->worker_count; ++i) {
-		pthread_create(&statsd->workers[i], NULL, &statsd__thread, statsd);
+		if (pthread_create(&statsd->workers[i], NULL, &statsd__thread, statsd) != 0)
+			die("failed to start sampler thread");
 	}
 }
 
