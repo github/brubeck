@@ -42,7 +42,7 @@ struct multibloom *multibloom_new(int filters, int entries, double error)
 {
 	const double bpe = -(log(error) / 0.480453013918201);
 	int i;
-	struct multibloom *bloom = malloc(sizeof(struct multibloom) + filters * sizeof(void *));
+	struct multibloom *bloom = xmalloc(sizeof(struct multibloom) + filters * sizeof(void *));
 
 	assert(entries > 1 && error > 0.0);
 
