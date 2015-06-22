@@ -1,7 +1,8 @@
 #include <unistd.h>
 #include <limits.h>
 #include <fcntl.h>
- #include <sys/socket.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "brubeck.h"
 
@@ -78,9 +79,35 @@ void url_to_inaddr2(struct sockaddr_in *addr, const char *url, int port)
 {
 	memset(addr, 0x0, sizeof(struct sockaddr_in));
 
-	addr->sin_family = AF_INET;
-	addr->sin_port = htons(port);
-	addr->sin_addr.s_addr = url ? inet_addr(url) : htonl(INADDR_ANY);
+	if (url) {
+		struct addrinfo hints;
+		struct addrinfo *result, *rp;
+
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = AF_INET;
+
+		if (getaddrinfo(url, NULL, &hints, &result) != 0)
+			die("failed to resolve address '%s'", url);
+
+		/* Look for the first IPv4 address we can find */
+		for (rp = result; rp; rp = rp->ai_next) {
+			if (result->ai_family == AF_INET &&
+				result->ai_addrlen == sizeof(struct sockaddr_in))
+				break;
+		}
+
+		if (!rp)
+			die("address format not supported");
+
+		memcpy(addr, rp->ai_addr, rp->ai_addrlen);
+		addr->sin_port = htons(port);
+
+		freeaddrinfo(result);
+	} else {
+		addr->sin_family = AF_INET;
+		addr->sin_port = htons(port);
+		addr->sin_addr.s_addr = htonl(INADDR_ANY);
+	}
 }
 
 #define FLOAT_PRECISION 4

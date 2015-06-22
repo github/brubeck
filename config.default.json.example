@@ -10,7 +10,7 @@
   "backends" : [
     {
       "type" : "carbon",
-      "address" : "0.0.0.0",
+      "address" : "localhost",
       "port" : 2003,
       "frequency" : 10
     }
