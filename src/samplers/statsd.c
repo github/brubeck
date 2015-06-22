@@ -39,17 +39,18 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 	for (;;) {
 		int res = recvmmsg(sock, msgs, SIM_PACKETS, 0, NULL);
 
-		if (res == EAGAIN || res == EINTR || res == 0)
+		if (res < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+
+			log_splunk_errno("sampler=statsd event=failed_read");
+			brubeck_server_mark_dropped(server);
 			continue;
+		}
 
 		/* store stats */
 		brubeck_atomic_add(&server->stats.metrics, SIM_PACKETS);
 		brubeck_atomic_add(&statsd->sampler.inflow, SIM_PACKETS);
-
-		if (res < 0) {
-			brubeck_server_mark_dropped(server);
-			continue;
-		}
 
 		for (i = 0; i < SIM_PACKETS; ++i) {
 			char *buf = msgs[i].msg_hdr.msg_iov->iov_base;
@@ -89,19 +90,19 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 			sizeof(buffer) - 1, 0,
 			(struct sockaddr *)&reporter, &reporter_len);
 
-		if (res == EAGAIN || res == EINTR || res == 0)
+		if (res < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+
+			log_splunk_errno("sampler=statsd event=failed_read from=%s",
+				inet_ntoa(reporter.sin_addr));
+			brubeck_server_mark_dropped(server);
 			continue;
+		}
 
 		/* store stats */
 		brubeck_atomic_inc(&server->stats.metrics);
 		brubeck_atomic_inc(&statsd->sampler.inflow);
-
-		if (res < 0) {
-			brubeck_server_mark_dropped(server);
-			log_splunk_errno("sampler=statsd event=failed_read from=%s",
-				inet_ntoa(reporter.sin_addr));
-			continue;
-		}
 
 		if (brubeck_statsd_msg_parse(&msg, buffer, (size_t)res) < 0) {
 			if (msg.key_len > 0)

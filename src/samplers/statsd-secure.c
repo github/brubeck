@@ -118,17 +118,23 @@ static void *statsd_secure__thread(void *_in)
 		int res = recvfrom(statsd->sampler.in_sock, buffer,
 			sizeof(buffer) - 1, 0, (struct sockaddr *)&reporter, &reporter_len);
 
-		if (res == EAGAIN || res == EINTR || res == 0)
+		if (res < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+
+			log_splunk_errno("sampler=statsd-secure event=failed_read from=%s",
+				inet_ntoa(reporter.sin_addr));
+			brubeck_server_mark_dropped(server);
 			continue;
+		}
 
 		/* store stats */
 		brubeck_atomic_inc(&server->stats.metrics);
 		brubeck_atomic_inc(&statsd->sampler.inflow);
 
 		if (res < MIN_PACKET_SIZE) {
-			brubeck_server_mark_dropped(server);
-			log_splunk_errno("sampler=statsd-secure event=failed_read from=%s",
-				inet_ntoa(reporter.sin_addr));
+			log_splunk("sampler=statsd-secure event=short_pkt len=%d", res);
+			brubeck_atomic_inc(&server->stats.secure.failed);
 			continue;
 		}
 
