@@ -194,6 +194,7 @@ static void load_config(struct brubeck_server *server, const char *path)
 	/* optional */
 	int expire = 0;
 	char *http = NULL;
+	char *logfile = NULL;
 
 	server->name = "brubeck";
 	server->config_name = get_config_name(path);
@@ -205,16 +206,18 @@ static void load_config(struct brubeck_server *server, const char *path)
 	}
 
 	json_unpack_or_die(server->config,
-		"{s?:s, s:s, s:i, s:o, s:o, s?:s, s?:i}",
+		"{s?:s, s:s, s:i, s:o, s:o, s?:s, s?:i, s?:s}",
 		"server_name", &server->name,
 		"dumpfile", &server->dump_path,
 		"capacity", &capacity,
 		"backends", &backends,
 		"samplers", &samplers,
 		"http", &http,
-		"expire", &expire);
+		"expire", &expire,
+		"logfile", &logfile);
 
 	gh_log_set_instance(server->name);
+	gh_log_open(logfile);
 
 	server->metrics = brubeck_hashtable_new(1 << capacity);
 	if (!server->metrics)
