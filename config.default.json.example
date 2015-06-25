@@ -1,5 +1,4 @@
 {
-  "logfile" : "./log/brubeck.log",
   "sharding" : false,
   "server_name" : "brubeck_debug",
   "dumpfile" : "./brubeck.dump",
