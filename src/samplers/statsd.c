@@ -57,8 +57,12 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 			int len = msgs[i].msg_len;
 
 			if (brubeck_statsd_msg_parse(&msg, buf, len) < 0) {
+				if (msg.key_len > 0)
+					buf[msg.key_len] = ':';
+
+				log_splunk("sampler=statsd event=bad_key key='%.*s'", len, buf);
+
 				brubeck_server_mark_dropped(server);
-				log_splunk("sampler=statsd event=packet_drop");
 				continue;
 			}
 
