@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+extern struct ck_malloc ALLOCATOR;
 struct brubeck_metric;
 typedef struct brubeck_hashtable_t brubeck_hashtable_t;
 

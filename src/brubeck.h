@@ -38,6 +38,7 @@ struct brubeck_metric;
 #include "utils.h"
 #include "slab.h"
 #include "histogram.h"
+#include "hs.h"
 #include "metric.h"
 #include "sampler.h"
 #include "backend.h"
