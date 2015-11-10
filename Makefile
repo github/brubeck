@@ -26,6 +26,7 @@ SOURCES = \
 	src/samplers/statsd-secure.c \
 	src/samplers/statsd.c \
 	src/server.c \
+	src/set.c \
 	src/setproctitle.c \
 	src/slab.c \
 	src/utils.c

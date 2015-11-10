@@ -204,6 +204,39 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 	}
 }
 
+
+/*********************************************
+ * Set
+ *
+ * ALLOC: ?
+ *********************************************/
+static void
+set__record(struct brubeck_metric *metric, sample_value_t value)
+{
+	pthread_spin_lock(&metric->lock);
+	{
+		brubeck_set_add(metric, value.s);
+	}
+	pthread_spin_unlock(&metric->lock);
+}
+
+static void
+set__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+{
+	value_t value = 0.0;
+
+	pthread_spin_lock(&metric->lock);
+	{
+		if(NULL != metric->as.set) {
+			value = brubeck_set_size(metric->as.set);
+			brubeck_set_clear(metric->as.set);
+		}
+	}
+	pthread_spin_unlock(&metric->lock);
+
+	sample(metric->key, value, opaque);
+}
+
 /********************************************************/
 
 static struct brubeck_metric__proto {
@@ -238,6 +271,12 @@ static struct brubeck_metric__proto {
 	{
 		&histogram__record,
 		&histogram__sample
+	},
+
+	/* Set */
+	{
+		&set__record,
+		&set__sample
 	},
 
 	/* Internal -- used for sampling brubeck itself */
