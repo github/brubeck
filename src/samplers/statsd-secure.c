@@ -166,7 +166,7 @@ static void *statsd_secure__thread(void *_in)
 
 		metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 		if (metric != NULL)
-			brubeck_metric_record(metric, msg.value);
+			brubeck_metric_record(metric, msg.value, msg.modifiers);
 	}
 
 	HMAC_CTX_cleanup(&ctx);

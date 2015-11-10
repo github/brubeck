@@ -8,6 +8,7 @@ struct brubeck_statsd_msg {
     uint16_t key_len; /* length of the key */
     uint16_t type;	/* type of the messaged, as a brubeck_mt_t */
     value_t value;	/* integer value of the message */
+    uint8_t modifiers; /* modifiers, as a brubeck_metric_mod_t */
     char *trail;    /* Any data following the 'key:value|type' construct, NULL terminated*/
 };
 
