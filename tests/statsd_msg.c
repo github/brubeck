@@ -10,7 +10,17 @@ static void try_parse(struct brubeck_statsd_msg *msg, const char *msg_text, doub
 	memcpy(buffer, msg_text, len);
 
 	sput_fail_unless(brubeck_statsd_msg_parse(msg, buffer, len) == 0, msg_text);
-	sput_fail_unless(expected == msg->value, "msg.value == expected");
+	sput_fail_unless(expected == msg->value.n, "msg.value.n == expected");
+}
+
+static void try_parse_set(struct brubeck_statsd_msg *msg, const char *msg_text, const char *expected)
+{
+	char buffer[64];
+	size_t len = strlen(msg_text);
+	memcpy(buffer, msg_text, len);
+
+	sput_fail_unless(brubeck_statsd_msg_parse(msg, buffer, len) == 0, msg_text);
+	sput_fail_unless(0 == strcmp(msg->value.s, expected), "msg.value.s == expected");
 }
 
 void test_statsd_msg__parse_strings(void)
@@ -26,4 +36,8 @@ void test_statsd_msg__parse_strings(void)
 	try_parse(&msg, "this.is.sparta:23.23|g", 23.23);
 	try_parse(&msg, "this.is.sparta:0.232030|g", 0.23203);
 	try_parse(&msg, "this.are.some.floats:1234567.89|g", 1234567.89);
+
+#define EXPECT "some.non-float.value"
+	try_parse_set(&msg, "this.is.a.set:" EXPECT "|s|@args", EXPECT);
+	try_parse_set(&msg, "this.is.a.set:" EXPECT "|s", EXPECT);
 }

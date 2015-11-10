@@ -129,6 +129,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 
 int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_t length)
 {
+	char *start;
 	char *end = buffer + length;
 	*end = '\0';
 
@@ -159,77 +160,41 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_
 	}
 
 	/**
-	 * Message value: the numeric value between ':' and '|'.
-	 * This is already converted to an integer.
-	 *
-	 *      gaugor:333|g
-	 *             ^^^
-	 */
-	{
-		int negative = 0;
-		char *start = buffer;
-
-		msg->value = 0.0;
-
-		if (*buffer == '-') {
-			++buffer;
-			negative = 1;
-		}
-
-		while (*buffer >= '0' && *buffer <= '9') {
-			msg->value = (msg->value * 10.0) + (*buffer - '0');
-			++buffer;
-		}
-
-		if (*buffer == '.') {
-			double f = 0.0, n = 0.0;
-			++buffer;
-
-			while (*buffer >= '0' && *buffer <= '9') {
-				f = (f * 10.0) + (*buffer - '0');
-				++buffer;
-				n += 1.0;
-			}
-
-			msg->value += f / pow(10.0, n);
-		}
-
-		if (negative)
-			msg->value = -msg->value;
-
-		if (unlikely(*buffer == 'e')) {
-			msg->value = strtod(start, &buffer);
-		}
-
-		if (*buffer != '|')
-			return -1;
-
-		buffer++;
-	}
-
-	/**
 	 * Message type: one or two char identifier with the
-	 * message type. Valid values: g, c, C, h, ms
+	 * message type. Valid values: g, c, C, h, ms, s
 	 *
 	 *      gaugor:333|g
 	 *                 ^
 	 */
 	{
+		msg->type = -1;
+		start = buffer;
+
+		while(*buffer != '|') {
+			if(*buffer == '\0' || *buffer == '\n')
+				return -1;
+			++buffer;
+		}
+		*buffer++ = '\0';	// null-terminate value
+
 		switch (*buffer) {
 			case 'g': msg->type = BRUBECK_MT_GAUGE; break;
 			case 'c': msg->type = BRUBECK_MT_METER; break;
 			case 'C': msg->type = BRUBECK_MT_COUNTER; break;
 			case 'h': msg->type = BRUBECK_MT_HISTO; break;
+			case 's': msg->type = BRUBECK_MT_SET; break;
 			case 'm':
-					  ++buffer;
-					  if (*buffer == 's') {
-						  msg->type = BRUBECK_MT_TIMER;
-						  break;
-					  }
+					++buffer;
+					if (*buffer == 's') {
+						msg->type = BRUBECK_MT_TIMER;
+						break;
+					}
 
 			default:
-					  return -1;
+					return -1;
 		}
+		if(-1 == msg->type)
+			return -1;
 	}
 
 	/**
@@ -245,16 +210,66 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_
 
 		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0')) {
 			msg->trail = NULL;
-			return 0;
-		}
-			
-		if (*buffer == '@' || *buffer == '|') {
+		} else if (*buffer == '@' || *buffer == '|') {
 			msg->trail = buffer;
-			return 0;
+		} else {
+			return -1;
+		}
+	}
+
+	///////////////////////////////////////////
+
+	/**
+	 * Message value: the numeric value between ':' and '|'.
+	 * This is already converted to an integer.
+	 *
+	 * TODO: support non-numeric values for set metrics
+	 *
+	 *      gaugor:333|g
+	 *             ^^^
+	 */
+	if(BRUBECK_MT_SET == msg->type) {
+		msg->value.s = start;
+	} else {
+		int negative = 0;
+		buffer = start;
+
+		msg->value.n = 0.0;
+
+		if (*buffer == '-') {
+			++buffer;
+			negative = 1;
 		}
 
-		return -1;
+		while (*buffer >= '0' && *buffer <= '9') {
+			msg->value.n = (msg->value.n * 10.0) + (*buffer - '0');
+			++buffer;
+		}
+
+		if (*buffer == '.') {
+			double f = 0.0, n = 0.0;
+			++buffer;
+
+			while (*buffer >= '0' && *buffer <= '9') {
+				f = (f * 10.0) + (*buffer - '0');
+				++buffer;
+				n += 1.0;
+			}
+
+			msg->value.n += f / pow(10.0, n);
+		}
+
+		if (negative)
+			msg->value.n = -msg->value.n;
+
+		if (unlikely(*buffer == 'e')) {
+			msg->value.n = strtod(start, &buffer);
+		}
+
+		if (*buffer != '\0')
+			return -1;
 	}
+	return 0;
 }
 
 static void *statsd__thread(void *_in)
