@@ -52,6 +52,7 @@ Brubeck supports most of the metric types from statsd and many other implementat
 - `C` - Counters
 - `h` - Histograms
 - `ms` - Timers (in milliseconds)
+- `s` - Sets
 
 Client-sent sampling rates are ignored.
 
