@@ -29,7 +29,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 
 	for (i = 0; i < SIM_PACKETS; ++i) {
 		iovecs[i].iov_base = xmalloc(MAX_PACKET_SIZE);
-		iovecs[i].iov_len = MAX_PACKET_SIZE;
+		iovecs[i].iov_len = MAX_PACKET_SIZE - 1;
 		msgs[i].msg_hdr.msg_iov = &iovecs[i];
 		msgs[i].msg_hdr.msg_iovlen = 1;
 	}
