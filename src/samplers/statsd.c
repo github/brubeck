@@ -18,10 +18,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 	const unsigned int SIM_PACKETS = statsd->mmsg_count;
 	struct brubeck_server *server = statsd->sampler.server;
 
-	struct brubeck_statsd_msg msg;
-	struct brubeck_metric *metric;
 	unsigned int i;
-
 	struct iovec iovecs[SIM_PACKETS];
 	struct mmsghdr msgs[SIM_PACKETS];
 
@@ -49,26 +46,12 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 		}
 
 		/* store stats */
-		brubeck_atomic_add(&server->stats.metrics, SIM_PACKETS);
 		brubeck_atomic_add(&statsd->sampler.inflow, SIM_PACKETS);
 
 		for (i = 0; i < SIM_PACKETS; ++i) {
 			char *buf = msgs[i].msg_hdr.msg_iov->iov_base;
-			int len = msgs[i].msg_len;
-
-			if (brubeck_statsd_msg_parse(&msg, buf, len) < 0) {
-				if (msg.key_len > 0)
-					buf[msg.key_len] = ':';
-
-				log_splunk("sampler=statsd event=bad_key key='%.*s'", len, buf);
-
-				brubeck_server_mark_dropped(server);
-				continue;
-			}
-
-			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
-			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value);
+			char *end = buf + msgs[i].msg_len;
+			brubeck_statsd_packet_parse(server, buf, end);
 		}
 	}
 }
@@ -78,11 +61,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 {
 	struct brubeck_server *server = statsd->sampler.server;
 
-	struct brubeck_statsd_msg msg;
-	struct brubeck_metric *metric;
-
 	char buffer[MAX_PACKET_SIZE];
-
 	struct sockaddr_in reporter;
 	socklen_t reporter_len = sizeof(reporter);
 	memset(&reporter, 0, reporter_len);
@@ -104,32 +83,13 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 			continue;
 		}
 
-		/* store stats */
-		brubeck_atomic_inc(&server->stats.metrics);
 		brubeck_atomic_inc(&statsd->sampler.inflow);
-
-		if (brubeck_statsd_msg_parse(&msg, buffer, (size_t)res) < 0) {
-			if (msg.key_len > 0)
-				buffer[msg.key_len] = ':';
-
-			log_splunk("sampler=statsd event=bad_key key='%.*s' from=%s",
-				res, buffer, inet_ntoa(reporter.sin_addr));
-
-			brubeck_server_mark_dropped(server);
-			continue;
-		}
-
-		metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
-		if (metric != NULL) {
-			brubeck_metric_record(metric, msg.value);
-		}
+		brubeck_statsd_packet_parse(server, buffer, buffer + res);
 	}
-
 }
 
-int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_t length)
+int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char *end)
 {
-	char *end = buffer + length;
 	*end = '\0';
 
 	/**
@@ -254,6 +214,32 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_
 		}
 
 		return -1;
+	}
+}
+
+void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, char *end)
+{
+	struct brubeck_statsd_msg msg;
+	struct brubeck_metric *metric;
+
+	while (buffer < end) {
+		char *stat_end = memchr(buffer, '\n', end - buffer);
+		if (!stat_end)
+			stat_end = end;
+
+		if (brubeck_statsd_msg_parse(&msg, buffer, stat_end) < 0) {
+			brubeck_server_mark_dropped(server);
+			log_splunk("sampler=statsd event=packet_drop");
+		} else {
+			brubeck_atomic_inc(&server->stats.metrics);
+
+			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
+			if (metric != NULL)
+				brubeck_metric_record(metric, msg.value);
+		}
+
+		/* move buf past this stat */
+		buffer = stat_end + 1;
 	}
 }
 

@@ -9,7 +9,7 @@ static void try_parse(struct brubeck_statsd_msg *msg, const char *msg_text, doub
 	size_t len = strlen(msg_text);
 	memcpy(buffer, msg_text, len);
 
-	sput_fail_unless(brubeck_statsd_msg_parse(msg, buffer, len) == 0, msg_text);
+	sput_fail_unless(brubeck_statsd_msg_parse(msg, buffer, buffer + len) == 0, msg_text);
 	sput_fail_unless(expected == msg->value, "msg.value == expected");
 }
 

@@ -96,9 +96,6 @@ static void *statsd_secure__thread(void *_in)
 	struct brubeck_statsd_secure *statsd = _in;
 	struct brubeck_server *server = statsd->sampler.server;
 
-	struct brubeck_statsd_msg msg;
-	struct brubeck_metric *metric;
-
 	char buffer[MAX_PACKET_SIZE];
 
 	HMAC_CTX ctx;
@@ -128,8 +125,6 @@ static void *statsd_secure__thread(void *_in)
 			continue;
 		}
 
-		/* store stats */
-		brubeck_atomic_inc(&server->stats.metrics);
 		brubeck_atomic_inc(&statsd->sampler.inflow);
 
 		if (res < MIN_PACKET_SIZE) {
@@ -151,22 +146,7 @@ static void *statsd_secure__thread(void *_in)
 		if (verify_token(server, statsd, buffer) < 0)
 			continue;
 
-		if (brubeck_statsd_msg_parse(
-					&msg, buffer + MIN_PACKET_SIZE,
-					(size_t)res - MIN_PACKET_SIZE) < 0) {
-			if (msg.key_len > 0)
-				buffer[msg.key_len] = ':';
-
-			log_splunk("sampler=statsd-secure event=bad_key key='%.*s' from=%s",
-				res, buffer, inet_ntoa(reporter.sin_addr));
-
-			brubeck_server_mark_dropped(server);
-			continue;
-		}
-
-		metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
-		if (metric != NULL)
-			brubeck_metric_record(metric, msg.value);
+		brubeck_statsd_packet_parse(server, buffer + MIN_PACKET_SIZE, buffer + res - MIN_PACKET_SIZE);
 	}
 
 	HMAC_CTX_cleanup(&ctx);
