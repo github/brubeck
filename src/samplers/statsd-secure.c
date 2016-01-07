@@ -184,7 +184,7 @@ brubeck_statsd_secure_new(struct brubeck_server *server, json_t *settings)
 {
 	struct brubeck_statsd_secure *std = xmalloc(sizeof(struct brubeck_statsd_secure));
 	char *address;
-	int port, replay_len;
+	int port, replay_len, drift;
 
 	std->sampler.shutdown = &shutdown_sampler;
 	std->sampler.type = BRUBECK_SAMPLER_STATSD_SECURE;
@@ -195,10 +195,11 @@ brubeck_statsd_secure_new(struct brubeck_server *server, json_t *settings)
 		"address", &address,
 		"port", &port,
 		"hmac_key", &std->hmac_key,
-		"max_drift", &std->drift,
+		"max_drift", &drift,
 		"replay_len", &replay_len);
 
 	brubeck_sampler_init_inet((struct brubeck_sampler *)std, server, address, port);
+	std->drift = (time_t)drift;
 	std->replays = multibloom_new(std->drift, replay_len, 0.001);
 	std->sampler.in_sock = brubeck_sampler_socket(&std->sampler, 0);
 
