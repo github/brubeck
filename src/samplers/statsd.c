@@ -10,7 +10,7 @@
 #	endif
 #endif
 
-#define MAX_PACKET_SIZE 512
+#define MAX_PACKET_SIZE 8192
 
 #ifdef HAVE_RECVMMSG
 static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
@@ -61,7 +61,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 {
 	struct brubeck_server *server = statsd->sampler.server;
 
-	char buffer[MAX_PACKET_SIZE];
+	char *buffer = xmalloc(MAX_PACKET_SIZE);
 	struct sockaddr_in reporter;
 	socklen_t reporter_len = sizeof(reporter);
 	memset(&reporter, 0, reporter_len);
@@ -69,8 +69,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 	log_splunk("sampler=statsd event=worker_online syscall=recvmsg socket=%d", sock);
 
 	for (;;) {
-		int res = recvfrom(sock, buffer,
-			sizeof(buffer) - 1, 0,
+		int res = recvfrom(sock, buffer, MAX_PACKET_SIZE - 1, 0,
 			(struct sockaddr *)&reporter, &reporter_len);
 
 		if (res < 0) {
