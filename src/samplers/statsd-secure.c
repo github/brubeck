@@ -146,7 +146,7 @@ static void *statsd_secure__thread(void *_in)
 		if (verify_token(server, statsd, buffer) < 0)
 			continue;
 
-		brubeck_statsd_packet_parse(server, buffer + MIN_PACKET_SIZE, buffer + res - MIN_PACKET_SIZE);
+		brubeck_statsd_packet_parse(server, buffer + MIN_PACKET_SIZE, buffer + res);
 	}
 
 	HMAC_CTX_cleanup(&ctx);
