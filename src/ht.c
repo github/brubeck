@@ -21,7 +21,7 @@ ht_free(void *p, size_t b, bool r)
 	free(p);
 }
 
-static struct ck_malloc ALLOCATOR = {
+struct ck_malloc ALLOCATOR = {
 	.malloc = ht_malloc,
 	.free = ht_free
 };

@@ -57,6 +57,13 @@ static inline void *xrealloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
+// strdup
+static inline char *xstrdup(const char *s)
+{
+	void *ptr = xmalloc(strlen(s) + 1);
+	return strcpy(ptr, s);
+}
+
 #define brubeck_atomic_inc(P) __sync_add_and_fetch((P), 1)
 #define brubeck_atomic_dec(P) __sync_add_and_fetch((P), -1)
 #define brubeck_atomic_add(P, V) __sync_add_and_fetch((P), (V))

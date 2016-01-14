@@ -24,6 +24,10 @@
 #define MAX_ADDR 256
 
 typedef double value_t;
+typedef union {
+	value_t n;
+	char *s;
+} sample_value_t;
 typedef uint64_t hash_t;
 
 struct brubeck_server;
@@ -34,6 +38,8 @@ struct brubeck_metric;
 #include "utils.h"
 #include "slab.h"
 #include "histogram.h"
+#include "hs.h"
+#include "set.h"
 #include "metric.h"
 #include "sampler.h"
 #include "backend.h"

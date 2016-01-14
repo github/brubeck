@@ -16,6 +16,7 @@ SOURCES = \
 	src/bloom.c \
 	src/city.c \
 	src/histogram.c \
+	src/hs.c \
 	src/ht.c \
 	src/http.c \
 	src/internal_sampler.c \
@@ -25,6 +26,7 @@ SOURCES = \
 	src/samplers/statsd-secure.c \
 	src/samplers/statsd.c \
 	src/server.c \
+	src/set.c \
 	src/setproctitle.c \
 	src/slab.c \
 	src/utils.c

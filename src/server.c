@@ -76,7 +76,7 @@ expire_metric(struct brubeck_metric *mt, void *_)
 static void
 dump_metric(struct brubeck_metric *mt, void *out_file)
 {
-	static const char *METRIC_NAMES[] = {"g", "c", "C", "h", "ms", "internal"};
+	static const char *METRIC_NAMES[] = {"g", "c", "C", "h", "ms", "s", "internal"};
 	fprintf((FILE *)out_file, "%s|%s\n", mt->key, METRIC_NAMES[mt->type]);
 }
 

@@ -7,6 +7,7 @@ enum brubeck_metric_t {
 	BRUBECK_MT_COUNTER, /** C */
 	BRUBECK_MT_HISTO, /** h */
 	BRUBECK_MT_TIMER, /** ms */
+	BRUBECK_MT_SET, /** s */
 	BRUBECK_MT_INTERNAL_STATS
 };
 
@@ -39,6 +40,7 @@ struct brubeck_metric {
 		struct {
 			value_t value, previous;
 		} counter;
+		brubeck_hashset_t *set;
 		struct brubeck_histo histogram;
 		void *other;
 	} as;
@@ -52,7 +54,7 @@ typedef void (*brubeck_sample_cb)(
 	void *backend);
 
 void brubeck_metric_sample(struct brubeck_metric *metric, brubeck_sample_cb cb, void *backend);
-void brubeck_metric_record(struct brubeck_metric *metric, value_t value);
+void brubeck_metric_record(struct brubeck_metric *metric, sample_value_t value);
 
 struct brubeck_metric *brubeck_metric_new(struct brubeck_server *server, const char *, size_t, uint8_t);
 struct brubeck_metric *brubeck_metric_find(struct brubeck_server *server, const char *, size_t, uint8_t);

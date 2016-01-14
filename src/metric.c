@@ -22,7 +22,7 @@ new_metric(struct brubeck_server *server, const char *key, size_t key_len, uint8
 	return metric;
 }
 
-typedef void (*mt_prototype_record)(struct brubeck_metric *, value_t);
+typedef void (*mt_prototype_record)(struct brubeck_metric *, sample_value_t);
 typedef void (*mt_prototype_sample)(struct brubeck_metric *, brubeck_sample_cb, void *);
 
 
@@ -32,11 +32,11 @@ typedef void (*mt_prototype_sample)(struct brubeck_metric *, brubeck_sample_cb, 
  * ALLOC: mt + 4 bytes
  *********************************************/
 static void
-gauge__record(struct brubeck_metric *metric, value_t value)
+gauge__record(struct brubeck_metric *metric, sample_value_t value)
 {
 	pthread_spin_lock(&metric->lock);
 	{
-		metric->as.gauge.value = value;
+		metric->as.gauge.value = value.n;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -62,11 +62,11 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4
  *********************************************/
 static void
-meter__record(struct brubeck_metric *metric, value_t value)
+meter__record(struct brubeck_metric *metric, sample_value_t value)
 {
 	pthread_spin_lock(&metric->lock);
 	{
-		metric->as.meter.value += value;
+		metric->as.meter.value += value.n;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -93,19 +93,19 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4 + 4 + 4
  *********************************************/
 static void
-counter__record(struct brubeck_metric *metric, value_t value)
+counter__record(struct brubeck_metric *metric, sample_value_t value)
 {
 	pthread_spin_lock(&metric->lock);
 	{
 		if (metric->as.counter.previous > 0.0) {
-			value_t diff = (value >= metric->as.counter.previous) ?
-				(value - metric->as.counter.previous) :
-				(value);
+			value_t diff = (value.n >= metric->as.counter.previous) ?
+				(value.n - metric->as.counter.previous) :
+				(value.n);
 
 			metric->as.counter.value += diff;
 		}
 
-		metric->as.counter.previous = value;
+		metric->as.counter.previous = value.n;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -132,11 +132,11 @@ counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *o
  * ALLOC: mt + 16 + 4
  *********************************************/
 static void
-histogram__record(struct brubeck_metric *metric, value_t value)
+histogram__record(struct brubeck_metric *metric, sample_value_t value)
 {
 	pthread_spin_lock(&metric->lock);
 	{
-		brubeck_histo_push(&metric->as.histogram, value);
+		brubeck_histo_push(&metric->as.histogram, value.n);
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -204,6 +204,39 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 	}
 }
 
+
+/*********************************************
+ * Set
+ *
+ * ALLOC: ?
+ *********************************************/
+static void
+set__record(struct brubeck_metric *metric, sample_value_t value)
+{
+	pthread_spin_lock(&metric->lock);
+	{
+		brubeck_set_add(metric, value.s);
+	}
+	pthread_spin_unlock(&metric->lock);
+}
+
+static void
+set__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+{
+	value_t value = 0.0;
+
+	pthread_spin_lock(&metric->lock);
+	{
+		if(NULL != metric->as.set) {
+			value = brubeck_set_size(metric->as.set);
+			brubeck_set_clear(metric->as.set);
+		}
+	}
+	pthread_spin_unlock(&metric->lock);
+
+	sample(metric->key, value, opaque);
+}
+
 /********************************************************/
 
 static struct brubeck_metric__proto {
@@ -240,6 +273,12 @@ static struct brubeck_metric__proto {
 		&histogram__sample
 	},
 
+	/* Set */
+	{
+		&set__record,
+		&set__sample
+	},
+
 	/* Internal -- used for sampling brubeck itself */
 	{
 		NULL, /* recorded manually */
@@ -252,7 +291,7 @@ void brubeck_metric_sample(struct brubeck_metric *metric, brubeck_sample_cb cb, 
 	_prototypes[metric->type].sample(metric, cb, backend);
 }
 
-void brubeck_metric_record(struct brubeck_metric *metric, value_t value)
+void brubeck_metric_record(struct brubeck_metric *metric, sample_value_t value)
 {
 	_prototypes[metric->type].record(metric, value);
 }
