@@ -12,7 +12,7 @@ struct brubeck_backend {
 	int shard_n;
 
 	int (*connect)(void *);
-	void (*sample)(const char *, value_t, void *);
+	void (*sample)(const struct brubeck_metric*, const char *, value_t, void *);
 	void (*flush)(void *);
 
 	uint32_t tick_time;

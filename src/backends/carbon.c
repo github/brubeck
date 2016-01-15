@@ -2,6 +2,13 @@
 #include <string.h>
 #include "brubeck.h"
 
+static const char carbon_empty_str[] = "";
+static const char carbon_global_prefix[] = "stats.";
+static const char carbon_global_count_prefix[] = "stats_counts.";
+static const char carbon_prefix_counter[] = "counters.";
+static const char carbon_prefix_timer[] = "timers.";
+static const char carbon_prefix_gauge[] = "gauges.";
+
 static inline int is_connected(struct brubeck_carbon *self)
 {
 	return (self->out_sock >= 0);
@@ -43,15 +50,77 @@ static void carbon_disconnect(struct brubeck_carbon *self)
 	self->out_sock = -1;
 }
 
-static void plaintext_each(
+static int carbon_namespace(
+	char *out_key,
+	const struct brubeck_metric *metric,
 	const char *key,
+	const uint8_t key_len,
+	const struct brubeck_carbon *carbon,
+	uint8_t counter_abs)
+{
+	char *ptr = out_key;
+
+	uint8_t prefix_len;
+	if (!carbon->legacy_namespace ||
+		!(IS_COUNTER(metric->type) && counter_abs)) {
+
+		prefix_len = strlen(carbon->global_prefix);
+		memcpy(ptr, carbon->global_prefix, prefix_len);
+		ptr += prefix_len;
+	}
+	else {
+		prefix_len = strlen(carbon->global_count_prefix);
+		memcpy(ptr, carbon->global_count_prefix, prefix_len);
+		ptr += prefix_len;
+	}
+
+	uint8_t metric_prefix_len = 0;
+	switch (metric->type) {
+		case BRUBECK_MT_COUNTER:
+		case BRUBECK_MT_METER:
+			metric_prefix_len = strlen(carbon->prefix_counter);
+			memcpy(ptr, carbon->prefix_counter, metric_prefix_len);
+			break;
+		case BRUBECK_MT_TIMER:
+			metric_prefix_len = strlen(carbon->prefix_timer);
+			memcpy(ptr, carbon->prefix_timer, metric_prefix_len);
+			break;
+		case BRUBECK_MT_GAUGE:
+			metric_prefix_len = strlen(carbon->prefix_gauge);
+			memcpy(ptr, carbon->prefix_gauge, metric_prefix_len);
+			break;
+		default:
+			break;
+	}
+
+	ptr += metric_prefix_len;
+
+	memcpy(ptr, key, key_len);
+	ptr += key_len;
+
+	if (IS_COUNTER(metric->type) && !carbon->legacy_namespace) {
+		if (counter_abs) {
+			memcpy(ptr, ".count", strlen(".count"));
+			ptr += strlen(".count");
+		}
+		else {
+			memcpy(ptr, ".rate", strlen(".rate"));
+			ptr += strlen(".rate");
+		}
+	}
+
+	return ptr - out_key;
+}
+
+static void plaintext_send(
+	const char *key,
+	uint8_t key_len,
 	value_t value,
 	void *backend)
 {
 	struct brubeck_carbon *carbon = (struct brubeck_carbon *)backend;
 	char buffer[1024];
 	char *ptr = buffer;
-	size_t key_len = strlen(key);
 	ssize_t wr;
 
 	if (!is_connected(carbon))
@@ -74,6 +143,35 @@ static void plaintext_each(
 	}
 
 	carbon->sent += wr;
+}
+
+static void plaintext_each(
+	const struct brubeck_metric *metric,
+	const char *key,
+	value_t value,
+	void *backend)
+{
+	struct brubeck_carbon *carbon = (struct brubeck_carbon *)backend;
+	size_t key_len = strlen(key);
+
+	if (!carbon->namespacing || metric->type == BRUBECK_MT_INTERNAL_STATS) {
+		plaintext_send(key, key_len, value, backend);
+		return;
+	}
+
+	char prefix_key[1024];
+	uint8_t prefix_key_len = 0;
+
+	prefix_key_len = carbon_namespace(prefix_key, metric, key, key_len, carbon, true);
+	plaintext_send(prefix_key, prefix_key_len, value, backend);
+
+	if (IS_COUNTER(metric->type) &&
+		carbon->backend.sample_freq != 0) {
+		prefix_key_len = carbon_namespace(prefix_key, metric,
+			key, key_len, carbon, false);
+		value_t normalized_val = value / carbon->backend.sample_freq;
+		plaintext_send(prefix_key, prefix_key_len, normalized_val, backend);
+	}
 }
 
 static inline size_t pickle1_int32(char *ptr, void *_src)
@@ -176,6 +274,7 @@ static void pickle1_flush(void *backend)
 }
 
 static void pickle1_each(
+	const struct brubeck_metric *metric,
 	const char *key,
 	value_t value,
 	void *backend)
@@ -191,8 +290,27 @@ static void pickle1_each(
 	if (!is_connected(carbon))
 		return;
 
-	pickle1_push(&carbon->pickler, key, key_len,
+	if (!carbon->namespacing || metric->type == BRUBECK_MT_INTERNAL_STATS) {
+		pickle1_push(&carbon->pickler, key, key_len,
+			carbon->backend.tick_time, value);
+		return;
+	}
+
+	char prefix_key[1024];
+	uint8_t prefix_key_len = 0;
+
+	prefix_key_len = carbon_namespace(prefix_key, metric, key, key_len, carbon, true);
+	pickle1_push(&carbon->pickler, prefix_key, prefix_key_len,
 		carbon->backend.tick_time, value);
+
+	if (IS_COUNTER(metric->type) &&
+		carbon->backend.sample_freq != 0) {
+		prefix_key_len = carbon_namespace(prefix_key, metric,
+			key, key_len, carbon, false);
+		value_t normalized_val = value / carbon->backend.sample_freq;
+		pickle1_push(&carbon->pickler, prefix_key, prefix_key_len,
+			carbon->backend.tick_time, normalized_val);
+	}
 }
 
 struct brubeck_backend *
@@ -200,14 +318,28 @@ brubeck_carbon_new(struct brubeck_server *server, json_t *settings, int shard_n)
 {
 	struct brubeck_carbon *carbon = xcalloc(1, sizeof(struct brubeck_carbon));
 	char *address;
-	int port, frequency, pickle = 0;
+	const char *global_prefix = carbon_global_prefix;
+	const char *global_count_prefix = carbon_global_count_prefix;
+	const char *prefix_counter = carbon_prefix_counter;
+	const char *prefix_timer = carbon_prefix_timer;
+	const char *prefix_gauge = carbon_prefix_gauge;
+	int port, frequency, pickle, namespacing = 0;
+	int legacy_namespace = 1;
 
 	json_unpack_or_die(settings,
-		"{s:s, s:i, s?:b, s:i}",
+		"{s:s, s:i, s?:b, s:i, s?:b, s?:b, s?:s, s?:s, s?:s, s?:s, s?:s}",
 		"address", &address,
 		"port", &port,
 		"pickle", &pickle,
-		"frequency", &frequency);
+		"frequency", &frequency,
+
+		"namespacing", &namespacing,
+		"legacy_namespace", &legacy_namespace,
+		"global_prefix", &global_prefix,
+		"global_count_prefix", &global_count_prefix,
+		"prefix_counter", &prefix_counter,
+		"prefix_timer", &prefix_timer,
+		"prefix_gauge", &prefix_gauge);
 
 	carbon->backend.type = BRUBECK_BACKEND_CARBON;
 	carbon->backend.shard_n = shard_n;
@@ -224,6 +356,14 @@ brubeck_carbon_new(struct brubeck_server *server, json_t *settings, int shard_n)
 	}
 
 	carbon->backend.sample_freq = frequency;
+	carbon->namespacing = namespacing;
+	carbon->legacy_namespace = legacy_namespace;
+	carbon->global_prefix = global_prefix;
+	carbon->global_count_prefix = global_count_prefix;
+	carbon->prefix_counter = prefix_counter;
+	carbon->prefix_timer = prefix_timer;
+	carbon->prefix_gauge = prefix_gauge;
+
 	carbon->backend.server = server;
 	carbon->out_sock = -1;
 	url_to_inaddr2(&carbon->out_sockaddr, address, port);

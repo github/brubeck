@@ -47,6 +47,7 @@ struct brubeck_metric {
 };
 
 typedef void (*brubeck_sample_cb)(
+	const struct brubeck_metric *metric,
 	const char *key,
 	value_t value,
 	void *backend);

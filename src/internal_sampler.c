@@ -13,43 +13,43 @@ brubeck_internal__sample(struct brubeck_metric *metric, brubeck_sample_cb sample
 
 	WITH_SUFFIX(".metrics") {
 		value = brubeck_atomic_swap(&stats->metrics, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".errors") {
 		value = brubeck_atomic_swap(&stats->errors, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".unique_keys") {
 		value = brubeck_atomic_fetch(&stats->unique_keys);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".memory") {
 		value = brubeck_atomic_fetch(&stats->memory);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	/* Secure statsd endpoint */
 	WITH_SUFFIX(".secure.failed") {
 		value = brubeck_atomic_swap(&stats->secure.failed, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".secure.from_future") {
 		value = brubeck_atomic_swap(&stats->secure.from_future, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".secure.delayed") {
 		value = brubeck_atomic_swap(&stats->secure.delayed, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	WITH_SUFFIX(".secure.replayed") {
 		value = brubeck_atomic_swap(&stats->secure.replayed, 0);
-		sample(key, value, opaque);
+		sample(metric, key, value, opaque);
 	}
 
 	/*

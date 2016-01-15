@@ -16,9 +16,19 @@ struct brubeck_carbon {
 			uint16_t pt;
 	} pickler;
 	size_t sent;
+
+	int namespacing;
+	int legacy_namespace;
+	const char *global_prefix;
+	const char *global_count_prefix;
+	const char *prefix_counter;
+	const char *prefix_timer;
+	const char *prefix_gauge;
 };
 
 struct brubeck_backend *brubeck_carbon_new(
 	struct brubeck_server *server, json_t *settings, int shard_n);
+
+#define IS_COUNTER(t) (t == BRUBECK_MT_COUNTER || t == BRUBECK_MT_METER)
 
 #endif
