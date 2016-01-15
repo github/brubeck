@@ -57,9 +57,22 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 }
 #endif
 
+extern void brubeck__hexdump(FILE *dest, const void *addr, size_t len);
+
+static FILE *open_logfile(void)
+{
+	static int thread_n = 0;
+
+	char filename[128];
+	int th = brubeck_atomic_inc(&thread_n);
+	snprintf(filename, sizeof(filename), "udp-%d-%d.log", (int)getpid(), th);
+	return fopen(filename, "w");
+}
+
 static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 {
 	struct brubeck_server *server = statsd->sampler.server;
+	FILE *logfile = open_logfile();
 
 	char *buffer = xmalloc(MAX_PACKET_SIZE);
 	struct sockaddr_in reporter;
@@ -82,6 +95,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 			continue;
 		}
 
+		brubeck__hexdump(logfile, buffer, res);
 		brubeck_atomic_inc(&statsd->sampler.inflow);
 		brubeck_statsd_packet_parse(server, buffer, buffer + res);
 	}

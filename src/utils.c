@@ -206,3 +206,31 @@ END:
 	*p = 0;
 	return p - outbuf;
 }
+
+void brubeck__hexdump(FILE *dest, const void *addr, size_t len)
+{
+	size_t i;
+	unsigned char buff[17];
+	const unsigned char *pc = (unsigned char*)addr;
+
+	for (i = 0; i < len; i++) {
+		if ((i % 16) == 0) {
+			if (i != 0)
+				fprintf(dest, "  %s\n", buff);
+			fprintf(dest, "  %04x ", (unsigned int)i);
+		}
+
+		fprintf(dest, " %02x", pc[i]);
+
+		if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+			buff[i % 16] = '.';
+		else
+			buff[i % 16] = pc[i];
+		buff[(i % 16) + 1] = '\0';
+	}
+	while ((i % 16) != 0) {
+		fprintf(dest, "   ");
+		i++;
+	}
+	fprintf(dest, "  %s\n\n", buff);
+}
