@@ -19,6 +19,14 @@ new_metric(struct brubeck_server *server, const char *key, size_t key_len, uint8
 	metric->type = type;
 	pthread_spin_init(&metric->lock, PTHREAD_PROCESS_PRIVATE);
 
+#ifdef BRUBECK_METRICS_FLOW
+	metric->flow = 0;
+#else
+	/* Compile time assert: ensure that the metric struct can be packed
+	 * in a single slab */
+	ct_assert(sizeof(struct brubeck_metric) <= (SLAB_SIZE));
+#endif
+
 	return metric;
 }
 
@@ -263,10 +271,6 @@ brubeck_metric_new(struct brubeck_server *server, const char *key, size_t key_le
 	struct brubeck_metric *metric;
 	int shard = 0;
 
-	/* Compile time assert: ensure that the metric struct can be packed
-	 * in a single slab */
-	ct_assert(sizeof(struct brubeck_metric) <= (SLAB_SIZE));
-
 	metric = new_metric(server, key, key_len, type);
 	if (!metric)
 		return NULL;
@@ -298,6 +302,10 @@ brubeck_metric_find(struct brubeck_server *server, const char *key, size_t key_l
 
 		return brubeck_metric_new(server, key, key_len, type);
 	}
+
+#ifdef BRUBECK_METRICS_FLOW
+	brubeck_atomic_inc(&metric->flow);
+#endif
 
 	metric->expire = BRUBECK_EXPIRE_ACTIVE;
 	return metric;

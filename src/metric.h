@@ -27,6 +27,10 @@ enum {
 struct brubeck_metric {
 	struct brubeck_metric *next;
 
+#ifdef BRUBECK_METRICS_FLOW
+	uint64_t flow;
+#endif
+
 	pthread_spinlock_t lock;
 	uint16_t key_len;
 	uint8_t type;
