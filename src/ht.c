@@ -104,3 +104,24 @@ brubeck_hashtable_foreach(brubeck_hashtable_t *ht, void (*callback)(struct brube
 
 	pthread_mutex_unlock(&ht->write_mutex);
 }
+
+struct brubeck_metric **
+brubeck_hashtable_to_a(brubeck_hashtable_t *ht, size_t *length)
+{
+	ck_ht_iterator_t iterator = CK_HT_ITERATOR_INITIALIZER;
+	ck_ht_entry_t *entry;
+	struct brubeck_metric **array;
+	size_t i = 0;
+
+	pthread_mutex_lock(&ht->write_mutex);
+	*length = ck_ht_count(&ht->table);
+	array = xmalloc(*length * sizeof(void *));
+
+	while (ck_ht_next(&ht->table, &iterator, &entry))
+		array[i++] = ck_ht_entry_value(entry);
+
+	pthread_mutex_unlock(&ht->write_mutex);
+
+	assert(*length == i);
+	return array;
+}

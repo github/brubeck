@@ -34,6 +34,8 @@ ifndef BRUBECK_NO_HTTP
 	CFLAGS += -DBRUBECK_HAVE_MICROHTTPD
 endif
 
+CFLAGS += -DBRUBECK_METRICS_FLOW
+
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))
 HEADERS = $(wildcard src/*.h) $(wildcard src/libcuckoo/*.h)
 

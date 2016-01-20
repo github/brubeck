@@ -4,6 +4,53 @@
 #include "microhttpd.h"
 #include "jansson.h"
 
+#ifdef BRUBECK_METRICS_FLOW
+
+static int flow_cmp(const void *a, const void *b)
+{
+	const struct brubeck_metric *ma = *(const struct brubeck_metric **)a;
+	const struct brubeck_metric *mb = *(const struct brubeck_metric **)b;
+	if (ma->flow < mb->flow) return 1;
+	if (ma->flow > mb->flow) return -1;
+	return 0;
+}
+
+static struct MHD_Response *
+flow_stats(struct brubeck_server *server)
+{
+	size_t metric_count, i, topn;
+	struct brubeck_metric **metrics;
+	json_t *top_metrics_j;
+	char *jsonr;
+
+	metrics = brubeck_hashtable_to_a(server->metrics, &metric_count);
+	qsort(metrics, metric_count, sizeof(struct brubeck_metric *), &flow_cmp);
+
+	topn = (metric_count < 32) ? metric_count : 32;
+	top_metrics_j = json_object();
+
+	for (i = 0; i < topn; ++i) {
+		struct brubeck_metric *m = metrics[i];
+		json_object_set_new(top_metrics_j, m->key, json_integer(m->flow));
+	}
+
+	free(metrics);
+	jsonr = json_dumps(top_metrics_j, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+	json_decref(top_metrics_j);
+
+	return MHD_create_response_from_data(strlen(jsonr), jsonr, 1, 0);
+}
+
+#else
+
+static struct MHD_Response *
+flow_stats(struct brubeck_server *server)
+{
+	return NULL;
+}
+
+#endif
+
 static struct brubeck_metric *safe_lookup_metric(struct brubeck_server *server, const char *key)
 {
 	return brubeck_hashtable_find(server->metrics, key, (uint16_t)strlen(key));
@@ -157,6 +204,9 @@ handle_request(void *cls, struct MHD_Connection *connection,
 
 		else if (!strcmp(url, "/stats"))
 			response = send_stats(brubeck);
+
+		else if (!strcmp(url, "/flow_stats"))
+			response = flow_stats(brubeck);
 
 		else if (starts_with(url, "/metric/"))
 			response = send_metric(brubeck, url);
