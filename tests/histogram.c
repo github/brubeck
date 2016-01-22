@@ -25,7 +25,7 @@ static void *thread_histo(void *ptr)
 		} else {
 			pthread_spin_lock(&t->lock);
 			{
-				brubeck_histo_push(&t->h, 0.42);
+				brubeck_histo_push(&t->h, 0.42, 1.0);
 			}
 			pthread_spin_unlock(&t->lock);
 		}
@@ -50,7 +50,7 @@ void test_histogram__single_element(void)
 
 	memset(&h, 0x0, sizeof(h));
 
-	brubeck_histo_push(&h, 42.0);
+	brubeck_histo_push(&h, 42.0, 1.0);
 	sput_fail_unless(h.size == 1, "push value to histogram");
 
 	brubeck_histo_sample(&sample, &h);
@@ -70,9 +70,9 @@ void test_histogram__large_range(void)
 
 	memset(&h, 0x0, sizeof(h));
 
-	brubeck_histo_push(&h, 1.3e12);
-	brubeck_histo_push(&h, 42.0);
-	brubeck_histo_push(&h, 42.0);
+	brubeck_histo_push(&h, 1.3e12, 1.0);
+	brubeck_histo_push(&h, 42.0, 1.0);
+	brubeck_histo_push(&h, 42.0, 1.0);
 
 	brubeck_histo_sample(&sample, &h);
 

@@ -1,15 +1,28 @@
 #include "brubeck.h"
+#include <limits.h>
 
 #define HISTO_INIT_SIZE 16
 
-void brubeck_histo_push(struct brubeck_histo *histo, value_t value)
+void brubeck_histo_push(struct brubeck_histo *histo, value_t value, value_t sample_rate)
 {
-	if (histo->size == histo->alloc) {
-		histo->alloc *= 2;
-		if (histo->alloc < HISTO_INIT_SIZE)
-			histo->alloc = HISTO_INIT_SIZE;
+	histo->count += (1.0 / sample_rate);
 
-		histo->values = xrealloc(histo->values, histo->alloc * sizeof(value_t));
+	if (histo->size == histo->alloc) {
+		size_t new_size;
+
+		if (histo->size == USHRT_MAX)
+			return;
+
+		new_size = histo->alloc * 2;
+
+		if (new_size > USHRT_MAX)
+			new_size = USHRT_MAX;
+		if (new_size < HISTO_INIT_SIZE)
+			new_size = HISTO_INIT_SIZE;
+		if (new_size != histo->alloc) {
+			histo->alloc = (uint16_t)new_size;
+			histo->values = xrealloc(histo->values, histo->alloc * sizeof(value_t));
+		}
 	}
 
 	histo->values[histo->size++] = value;
@@ -63,7 +76,7 @@ void brubeck_histo_sample(
 	sample->max = histo->values[histo->size - 1];
 	sample->mean = sample->sum / histo->size;
 	sample->median = histo_percentile(histo, 0.5f);
-	sample->count = histo->size;
+	sample->count = histo->count;
 
 	sample->percentile[PC_75] = histo_percentile(histo, 0.75f);
 	sample->percentile[PC_95] = histo_percentile(histo, 0.95f);
