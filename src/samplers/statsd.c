@@ -68,7 +68,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value);
+				brubeck_metric_record(metric, msg.value, msg.modifiers);
 		}
 	}
 }
@@ -121,7 +121,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 
 		metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 		if (metric != NULL) {
-			brubeck_metric_record(metric, msg.value);
+			brubeck_metric_record(metric, msg.value, msg.modifiers);
 		}
 	}
 
@@ -169,11 +169,16 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, size_
 		int negative = 0;
 		char *start = buffer;
 
+		msg->modifiers = 0;
 		msg->value = 0.0;
 
 		if (*buffer == '-') {
 			++buffer;
 			negative = 1;
+			msg->modifiers |= BRUBECK_MOD_RELATIVE_VALUE;
+		} else if (*buffer == '+') {
+			++buffer;
+			msg->modifiers |= BRUBECK_MOD_RELATIVE_VALUE;
 		}
 
 		while (*buffer >= '0' && *buffer <= '9') {

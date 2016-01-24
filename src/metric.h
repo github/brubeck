@@ -10,6 +10,10 @@ enum brubeck_metric_t {
 	BRUBECK_MT_INTERNAL_STATS
 };
 
+enum brubeck_metric_mod_t {
+	BRUBECK_MOD_RELATIVE_VALUE = 1
+};
+
 enum brubeck_aggregate_t {
 	BRUBECK_AG_LAST,
 	BRUBECK_AG_SUM,
@@ -52,7 +56,7 @@ typedef void (*brubeck_sample_cb)(
 	void *backend);
 
 void brubeck_metric_sample(struct brubeck_metric *metric, brubeck_sample_cb cb, void *backend);
-void brubeck_metric_record(struct brubeck_metric *metric, value_t value);
+void brubeck_metric_record(struct brubeck_metric *metric, value_t value, uint8_t modifiers);
 
 struct brubeck_metric *brubeck_metric_new(struct brubeck_server *server, const char *, size_t, uint8_t);
 struct brubeck_metric *brubeck_metric_find(struct brubeck_server *server, const char *, size_t, uint8_t);
