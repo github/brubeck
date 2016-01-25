@@ -86,4 +86,5 @@ void brubeck_histo_sample(
 
 	/* empty the histogram */
 	histo->size = 0;
+	histo->count = 0;
 }
