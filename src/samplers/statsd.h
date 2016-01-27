@@ -4,11 +4,11 @@
 #include "bloom.h"
 
 struct brubeck_statsd_msg {
-    char *key;      /* The key of the message, NULL terminated */
-    uint16_t key_len; /* length of the key */
-    uint16_t type;	/* type of the messaged, as a brubeck_mt_t */
-    value_t value;	/* integer value of the message */
-    char *trail;    /* Any data following the 'key:value|type' construct, NULL terminated*/
+	char *key;      /* The key of the message, NULL terminated */
+	uint16_t key_len; /* length of the key */
+	uint16_t type;	/* type of the messaged, as a brubeck_mt_t */
+	value_t value;	/* floating point value of the message */
+	value_t sample_freq; /* floating poit sample freq (1.0 / sample_rate) */
 };
 
 struct brubeck_statsd {

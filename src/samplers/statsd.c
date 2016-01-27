@@ -87,6 +87,47 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 	}
 }
 
+static inline char *
+parse_float(char *buffer, value_t *result)
+{
+	int negative = 0;
+	char *start = buffer;
+	value_t value = 0.0;
+
+	if (*buffer == '-') {
+		++buffer;
+		negative = 1;
+	}
+
+	while (*buffer >= '0' && *buffer <= '9') {
+		value = (value * 10.0) + (*buffer - '0');
+		++buffer;
+	}
+
+	if (*buffer == '.') {
+		double f = 0.0;
+		int n = 0;
+		++buffer;
+
+		while (*buffer >= '0' && *buffer <= '9') {
+			f = (f * 10.0) + (*buffer - '0');
+			buffer++;
+			n++;
+		}
+
+		value += f / pow(10.0, n);
+	}
+
+	if (negative)
+		value = -value;
+
+	if (unlikely(*buffer == 'e'))
+		value = strtod(start, &buffer);
+
+	*result = value;
+	return buffer;
+}
+
 int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char *end)
 {
 	*end = '\0';
@@ -125,40 +166,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	 *             ^^^
 	 */
 	{
-		int negative = 0;
-		char *start = buffer;
-
-		msg->value = 0.0;
-
-		if (*buffer == '-') {
-			++buffer;
-			negative = 1;
-		}
-
-		while (*buffer >= '0' && *buffer <= '9') {
-			msg->value = (msg->value * 10.0) + (*buffer - '0');
-			++buffer;
-		}
-
-		if (*buffer == '.') {
-			double f = 0.0, n = 0.0;
-			++buffer;
-
-			while (*buffer >= '0' && *buffer <= '9') {
-				f = (f * 10.0) + (*buffer - '0');
-				++buffer;
-				n += 1.0;
-			}
-
-			msg->value += f / pow(10.0, n);
-		}
-
-		if (negative)
-			msg->value = -msg->value;
-
-		if (unlikely(*buffer == 'e')) {
-			msg->value = strtod(start, &buffer);
-		}
+		buffer = parse_float(buffer, &msg->value);
 
 		if (*buffer != '|')
 			return -1;
@@ -189,29 +197,34 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 			default:
 					  return -1;
 		}
+
+		buffer++;
 	}
 
 	/**
-	 * Trailing bytes: data appended at the end of the message.
-	 * This is stored verbatim and will be parsed when processing
-	 * the specific message type. This is optional.
+	 * Sample rate: parse the sample rate trailer if it exists.
+	 * It must be a floating point number between 0.0 and 1.0
 	 *
 	 *      gorets:1|c|@0.1
 	 *                 ^^^^----
 	 */
 	{
-		buffer++;
+		if (buffer[0] == '|' && buffer[1] == '@') {
+			double sample_rate;
 
-		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0')) {
-			msg->trail = NULL;
-			return 0;
+			buffer = parse_float(buffer + 2, &sample_rate);
+			if (sample_rate <= 0.0 || sample_rate > 1.0)
+				return -1;
+
+			msg->sample_freq = (1.0 / sample_rate);
+		} else {
+			msg->sample_freq = 1.0;
 		}
+
+
+		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0'))
+			return 0;
 			
-		if (*buffer == '@' || *buffer == '|') {
-			msg->trail = buffer;
-			return 0;
-		}
-
 		return -1;
 	}
 }
@@ -234,7 +247,7 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value);
+				brubeck_metric_record(metric, msg.value, msg.sample_freq);
 		}
 
 		/* move buf past this stat */

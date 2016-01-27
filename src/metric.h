@@ -56,7 +56,7 @@ typedef void (*brubeck_sample_cb)(
 	void *backend);
 
 void brubeck_metric_sample(struct brubeck_metric *metric, brubeck_sample_cb cb, void *backend);
-void brubeck_metric_record(struct brubeck_metric *metric, value_t value);
+void brubeck_metric_record(struct brubeck_metric *metric, value_t value, value_t sample_rate);
 
 struct brubeck_metric *brubeck_metric_new(struct brubeck_server *server, const char *, size_t, uint8_t);
 struct brubeck_metric *brubeck_metric_find(struct brubeck_server *server, const char *, size_t, uint8_t);
