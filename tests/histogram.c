@@ -118,7 +118,7 @@ void test_histogram__with_sample_rate(void)
 	memset(&h, 0x0, sizeof(h));
 
 	for (j = 0; j < 128; ++j)
-		brubeck_histo_push(&h, (double)(j + 1), 0.1);
+		brubeck_histo_push(&h, (double)(j + 1), 10.0);
 
 	sput_fail_unless(h.size == 128, "histogram size");
 	sput_fail_unless(h.count == 1280, "histogram value count");
@@ -156,7 +156,7 @@ void test_histogram__capacity(void)
 	sput_fail_unless(sample.count == (HISTO_CAP + 500), "sample.count");
 
 	for (j = 0; j < HISTO_CAP + 500; ++j)
-		brubeck_histo_push(&h, (double)(j + 1), 0.1);
+		brubeck_histo_push(&h, (double)(j + 1), 10.0);
 
 	sput_fail_unless(h.size == HISTO_CAP, "histogram size");
 	sput_fail_unless(h.count == ((HISTO_CAP + 500) * 10), "histogram value count");
