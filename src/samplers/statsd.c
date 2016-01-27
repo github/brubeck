@@ -210,12 +210,17 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	 */
 	{
 		if (buffer[0] == '|' && buffer[1] == '@') {
-			buffer = parse_float(buffer + 2, &msg->sample_rate);
-			if (msg->sample_rate <= 0.0 || msg->sample_rate > 1.0)
+			double sample_rate;
+
+			buffer = parse_float(buffer + 2, &sample_rate);
+			if (sample_rate <= 0.0 || sample_rate > 1.0)
 				return -1;
+
+			msg->sample_freq = (1.0 / sample_rate);
 		} else {
-			msg->sample_rate = 1.0;
+			msg->sample_freq = 1.0;
 		}
+
 
 		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0'))
 			return 0;
@@ -242,7 +247,7 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value, msg.sample_rate);
+				brubeck_metric_record(metric, msg.value, msg.sample_freq);
 		}
 
 		/* move buf past this stat */

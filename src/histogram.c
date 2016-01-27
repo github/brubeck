@@ -3,9 +3,9 @@
 
 #define HISTO_INIT_SIZE 16
 
-void brubeck_histo_push(struct brubeck_histo *histo, value_t value, value_t sample_rate)
+void brubeck_histo_push(struct brubeck_histo *histo, value_t value, value_t sample_freq)
 {
-	histo->count += (1.0 / sample_rate);
+	histo->count += sample_freq;
 
 	if (histo->size == histo->alloc) {
 		size_t new_size;

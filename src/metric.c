@@ -40,7 +40,7 @@ typedef void (*mt_prototype_sample)(struct brubeck_metric *, brubeck_sample_cb, 
  * ALLOC: mt + 4 bytes
  *********************************************/
 static void
-gauge__record(struct brubeck_metric *metric, value_t value, value_t sample_rate)
+gauge__record(struct brubeck_metric *metric, value_t value, value_t sample_freq)
 {
 	pthread_spin_lock(&metric->lock);
 	{
@@ -70,10 +70,10 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4
  *********************************************/
 static void
-meter__record(struct brubeck_metric *metric, value_t value, value_t sample_rate)
+meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq)
 {
 	/* upsample */
-	value *= (1.0 / sample_rate);
+	value *= sample_freq;
 
 	pthread_spin_lock(&metric->lock);
 	{
@@ -104,10 +104,10 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4 + 4 + 4
  *********************************************/
 static void
-counter__record(struct brubeck_metric *metric, value_t value, value_t sample_rate)
+counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq)
 {
 	/* upsample */
-	value *= (1.0 / sample_rate);
+	value *= sample_freq;
 
 	pthread_spin_lock(&metric->lock);
 	{
@@ -146,11 +146,11 @@ counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *o
  * ALLOC: mt + 16 + 4
  *********************************************/
 static void
-histogram__record(struct brubeck_metric *metric, value_t value, value_t sample_rate)
+histogram__record(struct brubeck_metric *metric, value_t value, value_t sample_freq)
 {
 	pthread_spin_lock(&metric->lock);
 	{
-		brubeck_histo_push(&metric->as.histogram, value, sample_rate);
+		brubeck_histo_push(&metric->as.histogram, value, sample_freq);
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -266,9 +266,9 @@ void brubeck_metric_sample(struct brubeck_metric *metric, brubeck_sample_cb cb, 
 	_prototypes[metric->type].sample(metric, cb, backend);
 }
 
-void brubeck_metric_record(struct brubeck_metric *metric, value_t value, value_t sample_rate)
+void brubeck_metric_record(struct brubeck_metric *metric, value_t value, value_t sample_freq)
 {
-	_prototypes[metric->type].record(metric, value, sample_rate);
+	_prototypes[metric->type].record(metric, value, sample_freq);
 }
 
 struct brubeck_metric *
