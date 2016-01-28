@@ -290,7 +290,7 @@ brubeck_metric_new(struct brubeck_server *server, const char *key, size_t key_le
 	brubeck_backend_register_metric(server->backends[shard], metric);
 
 	/* Record internal stats */
-	brubeck_atomic_inc(&server->stats.unique_keys);
+	brubeck_stats_inc(server, unique_keys);
 	return metric;
 }
 

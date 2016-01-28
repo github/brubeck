@@ -1,6 +1,21 @@
 #ifndef __BRUBECK_SERVER_H__
 #define __BRUBECK_SERVER_H__
 
+struct brubeck_internal_stats {
+	struct {
+		uint32_t metrics;
+		uint32_t errors;
+		uint32_t unique_keys;
+
+		struct {
+			uint32_t failed;
+			uint32_t from_future;
+			uint32_t delayed;
+			uint32_t replayed;
+		} secure;
+	} live, sample;
+};
+
 // Server
 struct brubeck_server {
 	const char *name;
@@ -23,27 +38,11 @@ struct brubeck_server {
 	struct brubeck_backend *backends[8];
 
 	json_t *config;
-
-	struct brubeck_internal_stats {
-		pthread_t thread;
-		uint32_t metrics;
-		uint32_t errors;
-		uint32_t unique_keys;
-		uint32_t memory;
-
-		struct {
-			uint32_t failed;
-			uint32_t from_future;
-			uint32_t delayed;
-			uint32_t replayed;
-		} secure;
-	} stats;
+	struct brubeck_internal_stats internal_stats;
 };
 
-static inline void brubeck_server_mark_dropped(struct brubeck_server *server)
-{
-	server->stats.errors++;
-}
+#define brubeck_stats_inc(server, STAT) brubeck_atomic_inc(&server->internal_stats.live.STAT)
+#define brubeck_stats_sample(server, STAT) (server->internal_stats.sample.STAT)
 
 void brubeck_http_endpoint_init(struct brubeck_server *server, const char *listen_on);
 

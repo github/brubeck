@@ -41,7 +41,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 				continue;
 
 			log_splunk_errno("sampler=statsd event=failed_read");
-			brubeck_server_mark_dropped(server);
+			brubeck_stats_inc(server, errors);
 			continue;
 		}
 
@@ -78,7 +78,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 
 			log_splunk_errno("sampler=statsd event=failed_read from=%s",
 				inet_ntoa(reporter.sin_addr));
-			brubeck_server_mark_dropped(server);
+			brubeck_stats_inc(server, errors);
 			continue;
 		}
 
@@ -240,11 +240,10 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 			stat_end = end;
 
 		if (brubeck_statsd_msg_parse(&msg, buffer, stat_end) < 0) {
-			brubeck_server_mark_dropped(server);
+			brubeck_stats_inc(server, errors);
 			log_splunk("sampler=statsd event=packet_drop");
 		} else {
-			brubeck_atomic_inc(&server->stats.metrics);
-
+			brubeck_stats_inc(server, metrics);
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 			if (metric != NULL)
 				brubeck_metric_record(metric, msg.value, msg.sample_freq);
