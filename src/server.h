@@ -2,6 +2,7 @@
 #define __BRUBECK_SERVER_H__
 
 struct brubeck_internal_stats {
+	int sample_freq;
 	struct {
 		uint32_t metrics;
 		uint32_t errors;

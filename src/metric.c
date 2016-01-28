@@ -271,11 +271,19 @@ void brubeck_metric_record(struct brubeck_metric *metric, value_t value, value_t
 	_prototypes[metric->type].record(metric, value, sample_freq);
 }
 
+struct brubeck_backend *
+brubeck_metric_shard(struct brubeck_server *server, struct brubeck_metric *metric)
+{
+	int shard = 0;
+	if (server->active_backends > 1)
+		shard = CityHash32(metric->key, metric->key_len) % server->active_backends;
+	return server->backends[shard];
+}
+
 struct brubeck_metric *
 brubeck_metric_new(struct brubeck_server *server, const char *key, size_t key_len, uint8_t type)
 {
 	struct brubeck_metric *metric;
-	int shard = 0;
 
 	metric = new_metric(server, key, key_len, type);
 	if (!metric)
@@ -284,10 +292,7 @@ brubeck_metric_new(struct brubeck_server *server, const char *key, size_t key_le
 	if (!brubeck_hashtable_insert(server->metrics, metric->key, metric->key_len, metric))
 		return brubeck_hashtable_find(server->metrics, key, key_len);
 
-	if (server->active_backends > 1)
-		shard = CityHash32(key, key_len) % server->active_backends;
-
-	brubeck_backend_register_metric(server->backends[shard], metric);
+	brubeck_backend_register_metric(brubeck_metric_shard(server, metric), metric);
 
 	/* Record internal stats */
 	brubeck_stats_inc(server, unique_keys);

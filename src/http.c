@@ -181,15 +181,17 @@ send_stats(struct brubeck_server *brubeck)
 static struct MHD_Response *
 send_ping(struct brubeck_server *brubeck)
 {
+	const value_t frequency = (double)brubeck->internal_stats.sample_freq;
+
 	char *jsonr;
 	json_t *stats;
 
-	stats = json_pack("{s:s, s:i, s:s, s:i, s:i, s:i}",
+	stats = json_pack("{s:s, s:i, s:s, s:f, s:f, s:i}",
 		"version", "brubeck " GIT_SHA,
 		"pid", (int)getpid(),
 		"status", "OK",
-		"metrics", brubeck_stats_sample(brubeck, metrics),
-		"errors", brubeck_stats_sample(brubeck, errors),
+		"metrics_per_second", (value_t)brubeck_stats_sample(brubeck, metrics) / frequency,
+		"errors_per_second", (value_t)brubeck_stats_sample(brubeck, errors) / frequency,
 		"unique_keys", brubeck_stats_sample(brubeck, unique_keys)
 	);
 
