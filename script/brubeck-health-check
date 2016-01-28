@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require "net/http"
+require "uri"
+require "json"
+
+BRUBECK_URL = URI.parse(ARGV[0])
+MPS_THRESHOLD_WARNING = (ARGV[1] || 5_000).to_i
+MPS_THRESHOLD_CRITICAL = (ARGV[2] || 1_000).to_i
+
+def critical(error)
+  $stderr.puts error.to_s
+  exit 2
+end
+
+begin
+  http = Net::HTTP.new(BRUBECK_URL.host, BRUBECK_URL.port)
+  request = Net::HTTP::Get.new("/ping")
+  response = http.request(request)
+
+  if response.code.to_i != 200
+    critical("brubeck replied with #{response.code}") 
+  end
+
+  data = JSON.parse(response.body)
+
+  if data["status"] != "OK"
+    critical("brubeck is NOT healthy: #{data["status"]}")
+  end
+
+  mps = data["metrics_per_second"].to_i
+  exit 2 if mps < MPS_THRESHOLD_CRITICAL
+  exit 1 if mps < MPS_THRESHOLD_WARNING
+rescue => e
+  critical(e)
+end
