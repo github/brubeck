@@ -182,14 +182,24 @@ static struct MHD_Response *
 send_ping(struct brubeck_server *brubeck)
 {
 	const value_t frequency = (double)brubeck->internal_stats.sample_freq;
+	const char *status = "OK";
 
 	char *jsonr;
 	json_t *stats;
+	int i;
+
+	for (i = 0; i < brubeck->active_backends; ++i) {
+		struct brubeck_backend *backend = brubeck->backends[i];
+		if (!backend->is_connected(backend)) {
+			status = "ERROR (backend disconnected)";
+			break;
+		}
+	}
 
 	stats = json_pack("{s:s, s:i, s:s, s:f, s:f, s:i}",
 		"version", "brubeck " GIT_SHA,
 		"pid", (int)getpid(),
-		"status", "OK",
+		"status", status,
 		"metrics_per_second", (value_t)brubeck_stats_sample(brubeck, metrics) / frequency,
 		"errors_per_second", (value_t)brubeck_stats_sample(brubeck, errors) / frequency,
 		"unique_keys", brubeck_stats_sample(brubeck, unique_keys)
