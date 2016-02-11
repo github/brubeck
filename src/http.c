@@ -157,21 +157,53 @@ send_stats(struct brubeck_server *brubeck)
 	}
 
 	secure = json_pack("{s:i, s:i, s:i, s:i}",
-		"failed", brubeck->stats.secure.failed,
-		"from_future", brubeck->stats.secure.from_future,
-		"delayed", brubeck->stats.secure.delayed,
-		"replayed", brubeck->stats.secure.replayed
+		"failed", brubeck_stats_sample(brubeck, secure.failed),
+		"from_future", brubeck_stats_sample(brubeck, secure.from_future),
+		"delayed", brubeck_stats_sample(brubeck, secure.delayed),
+		"replayed", brubeck_stats_sample(brubeck, secure.replayed)
 	);
 
-	stats = json_pack("{s:s, s:i, s:i, s:i, s:i, s:o, s:o, s:o}",
+	stats = json_pack("{s:s, s:i, s:i, s:i, s:o, s:o, s:o}",
 		"version", "brubeck " GIT_SHA,
-		"metrics", brubeck->stats.metrics,
-		"errors", brubeck->stats.errors,
-		"unique_keys", brubeck->stats.unique_keys,
-		"memory", brubeck->stats.memory,
+		"metrics", brubeck_stats_sample(brubeck, metrics),
+		"errors", brubeck_stats_sample(brubeck, errors),
+		"unique_keys", brubeck_stats_sample(brubeck, unique_keys),
 		"secure", secure,
 		"backends", backends,
 		"samplers", samplers);
+
+	jsonr = json_dumps(stats, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+	json_decref(stats);
+	return MHD_create_response_from_data(
+		strlen(jsonr), jsonr, 1, 0);
+}
+
+static struct MHD_Response *
+send_ping(struct brubeck_server *brubeck)
+{
+	const value_t frequency = (double)brubeck->internal_stats.sample_freq;
+	const char *status = "OK";
+
+	char *jsonr;
+	json_t *stats;
+	int i;
+
+	for (i = 0; i < brubeck->active_backends; ++i) {
+		struct brubeck_backend *backend = brubeck->backends[i];
+		if (!backend->is_connected(backend)) {
+			status = "ERROR (backend disconnected)";
+			break;
+		}
+	}
+
+	stats = json_pack("{s:s, s:i, s:s, s:f, s:f, s:i}",
+		"version", "brubeck " GIT_SHA,
+		"pid", (int)getpid(),
+		"status", status,
+		"metrics_per_second", (value_t)brubeck_stats_sample(brubeck, metrics) / frequency,
+		"errors_per_second", (value_t)brubeck_stats_sample(brubeck, errors) / frequency,
+		"unique_keys", brubeck_stats_sample(brubeck, unique_keys)
+	);
 
 	jsonr = json_dumps(stats, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 	json_decref(stats);
@@ -190,17 +222,8 @@ handle_request(void *cls, struct MHD_Connection *connection,
 	struct brubeck_server *brubeck = cls;
 
 	if (!strcmp(method, "GET")) {
-		if (!strcmp(url, "/ping")) {
-			char *jsonr;
-			json_t *pong = json_pack("{s:s, s:i, s:s}",
-				"version", "brubeck " GIT_SHA,
-				"pid", (int)getpid(),
-				"status", "OK");
-
-			jsonr = json_dumps(pong, JSON_PRESERVE_ORDER);
-			response = MHD_create_response_from_data(strlen(jsonr), jsonr, 1, 0);
-			json_decref(pong);
-		}
+		if (!strcmp(url, "/_ping"))
+			response = send_ping(brubeck);
 
 		else if (!strcmp(url, "/stats"))
 			response = send_stats(brubeck);

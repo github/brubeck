@@ -63,7 +63,7 @@ verify_token(struct brubeck_server *server, struct brubeck_statsd_secure *statsd
 				(long long unsigned int)statsd->now,
 				(long long unsigned int)timestamp
 		);
-		brubeck_atomic_inc(&server->stats.secure.from_future);
+		brubeck_stats_inc(server, secure.from_future);
 		return -1;
 	}
 
@@ -75,7 +75,7 @@ verify_token(struct brubeck_server *server, struct brubeck_statsd_secure *statsd
 				(long long unsigned int)timestamp,
 				(int)(statsd->now - timestamp)
 		);
-		brubeck_atomic_inc(&server->stats.secure.delayed);
+		brubeck_stats_inc(server, secure.delayed);
 		return -1;
 	}
 
@@ -84,7 +84,7 @@ verify_token(struct brubeck_server *server, struct brubeck_statsd_secure *statsd
 
 	if (multibloom_check(statsd->replays, timestamp % statsd->drift, ha, hb)) {
 		log_splunk("sampler=statsd-secure event=fail_replayed hmac=%s", hmactos(buffer));
-		brubeck_atomic_inc(&server->stats.secure.replayed);
+		brubeck_stats_inc(server, secure.replayed);
 		return -1;
 	}
 
@@ -121,7 +121,7 @@ static void *statsd_secure__thread(void *_in)
 
 			log_splunk_errno("sampler=statsd-secure event=failed_read from=%s",
 				inet_ntoa(reporter.sin_addr));
-			brubeck_server_mark_dropped(server);
+			brubeck_stats_inc(server, errors);
 			continue;
 		}
 
@@ -129,7 +129,7 @@ static void *statsd_secure__thread(void *_in)
 
 		if (res < MIN_PACKET_SIZE) {
 			log_splunk("sampler=statsd-secure event=short_pkt len=%d", res);
-			brubeck_atomic_inc(&server->stats.secure.failed);
+			brubeck_stats_inc(server, secure.failed);
 			continue;
 		}
 
@@ -139,7 +139,7 @@ static void *statsd_secure__thread(void *_in)
 
 		if (memcmpct(buffer, hmac_buffer, SHA_SIZE) != 0) {
 			log_splunk("sampler=statsd-secure event=fail_auth hmac=%s", hmactos(buffer));
-			brubeck_atomic_inc(&server->stats.secure.failed);
+			brubeck_stats_inc(server, secure.failed);
 			continue;
 		}
 

@@ -2,8 +2,9 @@
 #include <string.h>
 #include "brubeck.h"
 
-static inline int is_connected(struct brubeck_carbon *self)
+static bool carbon_is_connected(void *backend)
 {
+	struct brubeck_carbon *self = (struct brubeck_carbon *)backend;
 	return (self->out_sock >= 0);
 }
 
@@ -11,7 +12,7 @@ static int carbon_connect(void *backend)
 {
 	struct brubeck_carbon *self = (struct brubeck_carbon *)backend;
 
-	if (is_connected(self))
+	if (carbon_is_connected(self))
 		return 0;
 
 	self->out_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -54,7 +55,7 @@ static void plaintext_each(
 	size_t key_len = strlen(key);
 	ssize_t wr;
 
-	if (!is_connected(carbon))
+	if (!carbon_is_connected(carbon))
 		return;
 
 	memcpy(ptr, key, key_len);
@@ -155,7 +156,7 @@ static void pickle1_flush(void *backend)
 	uint32_t *buf_lead;
 	ssize_t wr;
 	
-	if (buf->pt == 1 || !is_connected(carbon))
+	if (buf->pt == 1 || !carbon_is_connected(carbon))
 		return;
 
 	memcpy(buf->ptr + buf->pos, trail, sizeof(trail));
@@ -188,7 +189,7 @@ static void pickle1_each(
 		pickle1_flush(carbon);
 	}
 
-	if (!is_connected(carbon))
+	if (!carbon_is_connected(carbon))
 		return;
 
 	pickle1_push(&carbon->pickler, key, key_len,
@@ -212,6 +213,7 @@ brubeck_carbon_new(struct brubeck_server *server, json_t *settings, int shard_n)
 	carbon->backend.type = BRUBECK_BACKEND_CARBON;
 	carbon->backend.shard_n = shard_n;
 	carbon->backend.connect = &carbon_connect;
+	carbon->backend.is_connected = &carbon_is_connected;
 
 	if (pickle) {
 		carbon->backend.sample = &pickle1_each;
