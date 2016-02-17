@@ -2,7 +2,8 @@
 #define __BRUBECK_BACKEND_H__
 
 enum brubeck_backend_t {
-	BRUBECK_BACKEND_CARBON
+	BRUBECK_BACKEND_CARBON,
+        BRUBECK_BACKEND_OPENTSDB
 };
 
 struct brubeck_backend {
@@ -28,10 +29,12 @@ static inline const char *brubeck_backend_name(struct brubeck_backend *backend)
 {
 	switch (backend->type) {
 		case BRUBECK_BACKEND_CARBON: return "carbon";
+                case BRUBECK_BACKEND_OPENTSDB: return "opentsdb";
 		default: return NULL;
 	}
 }
 
 #include "backends/carbon.h"
+#include "backends/opentsdb.h"
 
 #endif

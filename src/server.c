@@ -46,7 +46,18 @@ update_proctitle(struct brubeck_server *server)
 				(i > 0) ? "," : "",
 				i + 1, sent, size_suffix[j],
 				(carbon->out_sock >= 0) ? "" : " (dc)");
-		}
+		} else if (backend->type == BRUBECK_BACKEND_OPENTSDB) {
+                        struct brubeck_opentsdb *opentsdb = (struct brubeck_opentsdb *)backend;
+                        double sent = opentsdb->sent;
+
+                        for (j = 0; j < 7 && sent >= 1024.0; ++j)
+                                sent /= 1024.0;
+
+                        PUTS("%s #%d %.1f%s%s",
+                                (i > 0) ? "," : "",
+                                i + 1, sent, size_suffix[j],
+                                (opentsdb->out_sock >= 0) ? "": " (dc)");
+                }
 	}
 
 	PUTS(" ] [ " UTF8_DOWNARROW);
@@ -111,7 +122,10 @@ static void load_backends(struct brubeck_server *server, json_t *backends)
 		if (type && !strcmp(type, "carbon")) {
 			backend = brubeck_carbon_new(server, b, server->active_backends);
 			server->backends[server->active_backends++] = backend; 
-		} else {
+		} else if (type && !strcmp(type, "opentsdb")) {
+                        backend = brubeck_opentsdb_new(server, b, server->active_backends);
+                        server->backends[server->active_backends++] = backend;
+                } else {
 			log_splunk("backend=%s event=invalid_backend", type);
 		}
 	}
