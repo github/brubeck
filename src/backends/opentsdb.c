@@ -97,7 +97,7 @@ brubeck_opentsdb_new(struct brubeck_server *server, json_t *settings, int shard_
                 "address", &address,
                 "port", &port,
                 "frequency", &frequency,
-                "tags", opentsdb->tags);
+                "tags", &(opentsdb->tags));
 
         opentsdb->backend.type = BRUBECK_BACKEND_OPENTSDB;
         opentsdb->backend.shard_n = shard_n;
