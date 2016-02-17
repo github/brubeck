@@ -12,6 +12,6 @@ struct brubeck_opentsdb {
 };
 
 struct brubeck_backend *brubeck_opentsdb_new(
-        struct brubeck_server *server, json_t *setings, int shard_n);
+        struct brubeck_server *server, json_t *settings, int shard_n);
 
 #endif
