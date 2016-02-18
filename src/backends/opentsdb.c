@@ -57,7 +57,6 @@ static void opentsdb_write(
         if (!is_connected(opentsdb))
                 return;
 
-        // put <metric> <timestamp> <value> <tagk1=tagv1[ tagk2=tagv2 ...tagkN=tagvN]>
         strcpy(ptr, "put");
         ptr += strlen("put");
         *ptr++ = ' ';
