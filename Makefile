@@ -13,7 +13,7 @@ all: default
 SOURCES = \
 	src/backend.c \
 	src/backends/carbon.c \
-        src/backends/opentsdb.c \
+	src/backends/opentsdb.c \
 	src/bloom.c \
 	src/city.c \
 	src/histogram.c \
