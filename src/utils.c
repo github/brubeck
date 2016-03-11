@@ -112,7 +112,7 @@ void url_to_inaddr2(struct sockaddr_in *addr, const char *url, int port)
 
 #define FLOAT_PRECISION 4
 
-int brubeck_itoa(char *ptr, uint32_t number)
+int brubeck_itoa(char *ptr, uint64_t number)
 {
 	char *origin = ptr;
 	int size;
