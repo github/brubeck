@@ -15,6 +15,22 @@ struct brubeck_carbon {
 			uint16_t pos;
 			uint16_t pt;
 	} pickler;
+	struct namespacing {
+		char *global;
+		size_t global_len;
+
+		char *counter;
+		size_t counter_len;
+
+		char *timer;
+		size_t timer_len;
+
+		char *histo;
+		size_t histo_len;
+
+		char *gauge;
+		size_t gauge_len;
+	} namespacing;
 	size_t sent;
 };
 
