@@ -177,6 +177,16 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 	key = alloca(metric->key_len + strlen(".percentile.999") + 1);
 	memcpy(key, metric->key, metric->key_len);
 
+
+	WITH_SUFFIX(".count") {
+		sample(key, hsample.count, opaque);
+	}
+
+	/* if there have been no metrics during this sampling period,
+	 * we don't need to report any of the histogram samples */
+	if (hsample.count == 0.0)
+		return;
+
 	WITH_SUFFIX(".min") {
 		sample(key, hsample.min, opaque);
 	}
@@ -191,10 +201,6 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 
 	WITH_SUFFIX(".mean") {
 		sample(key, hsample.mean, opaque);
-	}
-
-	WITH_SUFFIX(".count") {
-		sample(key, hsample.count, opaque);
 	}
 
 	WITH_SUFFIX(".median") {
