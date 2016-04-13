@@ -222,7 +222,7 @@ handle_request(void *cls, struct MHD_Connection *connection,
 	struct brubeck_server *brubeck = cls;
 
 	if (!strcmp(method, "GET")) {
-		if (!strcmp(url, "/_ping"))
+		if (!strcmp(url, "/_ping") || !strcmp(url, "/ping"))
 			response = send_ping(brubeck);
 
 		else if (!strcmp(url, "/stats"))
