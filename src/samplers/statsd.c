@@ -13,6 +13,11 @@
 #define MAX_PACKET_SIZE 8192
 
 #ifdef HAVE_RECVMMSG
+
+#ifndef MSG_WAITFORONE
+#	define MSG_WAITFORONE 0x0
+#endif
+
 static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 {
 	const unsigned int SIM_PACKETS = statsd->mmsg_count;
@@ -34,7 +39,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 	log_splunk("sampler=statsd event=worker_online syscall=recvmmsg socket=%d", sock);
 
 	for (;;) {
-		int res = recvmmsg(sock, msgs, SIM_PACKETS, 0, NULL);
+		int res = recvmmsg(sock, msgs, SIM_PACKETS, MSG_WAITFORONE, NULL);
 
 		if (res < 0) {
 			if (errno == EAGAIN || errno == EINTR)
