@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 			return 0;
 
 		default:
-			printf("Usage: %s [--log LOG_FILE] [--config CONFIG_FILE] [--version]", argv[0]);
+			printf("Usage: %s [--log LOG_FILE] [--config CONFIG_FILE] [--version]\n", argv[0]);
 			return 1;
 		}
 	}
