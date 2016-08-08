@@ -130,7 +130,7 @@ parse_float(char *buffer, value_t *result, uint8_t *mods)
 	if (negative)
 		value = -value;
 
-	if (unlikely(*buffer == 'e'))
+	if (unlikely(*buffer == 'e' || *buffer == 'E'))
 		value = strtod(start, &buffer);
 
 	*result = value;
