@@ -15,7 +15,7 @@ void sock_enlarge_in(int fd);
 
 char *find_substr(const char *s, const char *find, size_t slen);
 
-int brubeck_itoa(char *ptr, uint32_t number);
+int brubeck_itoa(char *ptr, uint64_t number);
 int brubeck_ftoa(char *outbuf, float f);
 
 static inline int starts_with(const char *str, const char *prefix)
