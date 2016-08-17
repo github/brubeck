@@ -182,11 +182,9 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 		sample(key, hsample.count, opaque);
 	}
 
-	if (opaque != NULL){
+	WITH_SUFFIX(".count_ps") {
 		struct brubeck_backend *backend = opaque;
-		WITH_SUFFIX(".count_ps") {
-			sample(key, hsample.count / (double)backend->sample_freq, opaque);
-		}
+		sample(key, hsample.count / (double)backend->sample_freq, opaque);
 	}
 
 	/* if there have been no metrics during this sampling period,
