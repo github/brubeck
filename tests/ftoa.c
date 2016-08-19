@@ -10,7 +10,7 @@ static void check_eq(float f, const char *str)
 
 void test_ftoa(void)
 {
-	check_eq(0.0, "0");
+	check_eq( 0.0, "0");
 	check_eq(15.0, "15");
 	check_eq(15.5, "15.5");
 	check_eq(15.505, "15.505");
@@ -18,4 +18,6 @@ void test_ftoa(void)
 	check_eq(1234.567, "1234.567");
 	check_eq(99999.999, "100000");
 	check_eq(0.999, "0.999");
+        check_eq(161061273600.0, "161061273600");
+        check_eq(2147483649, "2147483649");
 }
