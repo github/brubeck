@@ -30,7 +30,7 @@ static void *backend__thread(void *_ptr)
 			self->tick_time = now.tv_sec;
 
 			for (mt = self->queue; mt; mt = mt->next) {
-				if (mt->expire > BRUBECK_EXPIRE_DISABLED)
+				if (mt->state != BRUBECK_STATE_DISABLED)
 					brubeck_metric_sample(mt, self->sample, self);
 			}
 

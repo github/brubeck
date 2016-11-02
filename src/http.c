@@ -63,7 +63,7 @@ expire_metric(struct brubeck_server *server, const char *url)
 			server, url + strlen("/expire/"));
 
 	if (metric) {
-		metric->expire = BRUBECK_EXPIRE_DISABLED;
+		metric->state = BRUBECK_STATE_DISABLED;
 		return MHD_create_response_from_data(
 				0, "", 0, 0);
 	}
@@ -76,8 +76,8 @@ send_metric(struct brubeck_server *server, const char *url)
 	static const char *metric_types[] = {
 		"gauge", "meter", "counter", "histogram", "timer", "internal"
 	};
-	static const char *expire_status[] = {
-		"disabled", "inactive", "active"
+	static const char *metric_status[] = {
+		"inactive", "active"
 	};
 
 	struct brubeck_metric *metric = safe_lookup_metric(
@@ -92,7 +92,7 @@ send_metric(struct brubeck_server *server, const char *url)
 #else
 			"shard", 0,
 #endif
-			"expire", expire_status[metric->expire]
+			"status", metric_status[metric->state]
 		);
 
 		char *jsonr = json_dumps(mj, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
