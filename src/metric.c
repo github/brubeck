@@ -299,13 +299,16 @@ struct brubeck_metric *
 brubeck_metric_new(struct brubeck_server *server, const char *key, size_t key_len, uint8_t type)
 {
 	struct brubeck_metric *metric;
+	char brubeck_metric_key[key_len + 2];
+
+	sprintf(brubeck_metric_key, "%s %u", key, type);
 
 	metric = new_metric(server, key, key_len, type);
 	if (!metric)
 		return NULL;
 
-	if (!brubeck_hashtable_insert(server->metrics, metric->key, metric->key_len, metric))
-		return brubeck_hashtable_find(server->metrics, key, key_len);
+	if (!brubeck_hashtable_insert(server->metrics, brubeck_metric_key, key_len + 2, metric))
+		return brubeck_hashtable_find(server->metrics, brubeck_metric_key, key_len + 2);
 
 	brubeck_backend_register_metric(brubeck_metric_shard(server, metric), metric);
 
@@ -318,9 +321,12 @@ struct brubeck_metric *
 brubeck_metric_find(struct brubeck_server *server, const char *key, size_t key_len, uint8_t type)
 {
 	struct brubeck_metric *metric;
+	char brubeck_metric_key[key_len + 2];
+
+	sprintf(brubeck_metric_key, "%s %u", key, type);
 
 	assert(key[key_len] == '\0');
-	metric = brubeck_hashtable_find(server->metrics, key, (uint16_t)key_len);
+	metric = brubeck_hashtable_find(server->metrics, brubeck_metric_key, ((uint16_t)key_len) + 2);
 
 	if (unlikely(metric == NULL)) {
 		if (server->at_capacity)
