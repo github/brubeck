@@ -1,0 +1,5 @@
+brubeck (2536347-1) unstable; urgency=medium
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Klavs Klavsen <klavs@enableit.dk>  Fri, 10 Nov 2017 14:50:14 +0100
