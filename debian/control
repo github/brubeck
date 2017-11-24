@@ -9,6 +9,6 @@ Homepage: https://github.com/github/brubeck.git
 
 Package: brubeck
 Architecture: all
-Depends: libjansson4, libmicrohttpd10
+Depends: ${misc:Depends}, libjansson4, libmicrohttpd10
 Description: Brubeck statsd daemon replacement
  Brubec statsd daemon replacement

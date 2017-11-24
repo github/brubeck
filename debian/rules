@@ -18,8 +18,8 @@
 	./script/bootstrap
 	dh $@ --with systemd
 
-#override_dh_installinit:
-#	dh_installinit --name=brubeck -- defaults
+override_dh_installinit:
+	dh_installinit --name=brubeck -- defaults
 
 # dh_make generated override targets
 # This is example for Cmake (See https://bugs.debian.org/641051 )
