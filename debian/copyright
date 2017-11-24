@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: brubeck
-Source: https://raw.githubusercontent.com/nylas/brubeck/master/LICENSE
+Source: https://raw.githubusercontent.com/github/brubeck/master/LICENSE
 
 Files: *
 Copyright (c) 2012-2015 GitHub, Inc.
