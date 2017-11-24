@@ -1,0 +1,13 @@
+[Unit]
+Description=Brubeck Statsd Daemon
+
+[Service]
+Type=simple
+SyslogIdentifier=brubeck
+User=nobody
+Restart=on-failure
+ExecStart=/usr/bin/brubeck --log /var/log/brubeck/brubeck.log --config /etc/brubeck/config.json
+
+[Install]
+WantedBy=multi-user.target
+

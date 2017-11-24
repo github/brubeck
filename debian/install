@@ -1,1 +1,2 @@
 brubeck usr/bin
+config.default.json.example etc/brubeck
