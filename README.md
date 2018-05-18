@@ -53,7 +53,7 @@ Brubeck supports most of the metric types from statsd and many other implementat
 - `h` - Histograms
 - `ms` - Timers (in milliseconds)
 
-Client-sent sampling rates are ignored.
+Client-sent sampling rates are supported.
 
 Visit the [statsd docs](https://github.com/etsy/statsd/blob/master/docs/metric_types.md) for more information on metric types.
 
