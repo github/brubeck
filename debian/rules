@@ -13,13 +13,24 @@
 # package maintainers to append LDFLAGS
 #export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
 
-
 %:
-	./script/bootstrap
 	dh $@ --with systemd
 
 override_dh_installinit:
-	dh_installinit --name=brubeck -- defaults
+	dh_systemd_enable -pbrubeck --name=brubeck brubeck.service
+	dh_installinit -pbrubeck --no-start --noscripts
+	dh_systemd_start -pbrubeck --no-restart-on-upgrade
+
+override_dh_systemd_start:
+	echo "Not running dh_systemd_start"
+
+#
+#%:
+#	./script/bootstrap
+#	dh $@ --with systemd
+#
+#override_dh_installinit:
+#	dh_installinit --name=brubeck -- defaults
 
 # dh_make generated override targets
 # This is example for Cmake (See https://bugs.debian.org/641051 )

@@ -3,12 +3,13 @@ Priority: optional
 Maintainer: Klavs Klavsen <klavs@enableit.dk>
 Build-Depends: debhelper (>=9), libmicrohttpd-dev, libjansson-dev (>=2.5)
 Standards-Version: 3.9.6
+Section: misc
 Homepage: https://github.com/github/brubeck.git
 #Vcs-Git: git://anonscm.debian.org/collab-maint/brubeck.git
 #Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/brubeck.git
 
 Package: brubeck
-Architecture: all
-Depends: ${misc:Depends}, libjansson4, libmicrohttpd10
-Description: Brubeck statsd daemon replacement
- Brubec statsd daemon replacement
+Architecture: amd64
+Depends: ${misc:Depends}, libjansson4, libmicrohttpd12, ${shlibs:Depends}
+Description: Statsd daemon replacement
+ Use this to get a better Statsd implementation
