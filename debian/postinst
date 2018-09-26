@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# postinst
+
+# Make sure the script is executable:
+chmod +x /etc/init.d/brubeck-biz
+chmod +x /etc/init.d/brubeck-tech
+
+# Enable the daemon
+update-rc.d brubeck-biz  defaults
+update-rc.d brubeck-tech defaults
+
+# Start the service
+service brubeck-biz  start
+service brubeck-tech start
+

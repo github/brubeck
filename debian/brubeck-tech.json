@@ -1,0 +1,29 @@
+{
+  "sharding" : false,
+  "server_name" : "graphite_brubeck",
+  "dumpfile" : "./brubeck.dump",
+  "capacity" : 20000,
+  "expire" : 20,
+  "http" : ":8080",
+
+  "backends" : [
+    {
+      "type" : "carbon",
+      "address" : "localhost",
+      "port" : 2003,
+      "frequency" : 10
+    }
+  ],
+
+  "samplers" : [
+    {
+      "type" : "statsd",
+      "address" : "0.0.0.0",
+      "port" : 8125,
+      "workers" : 8,
+      "multisock" : true,
+      "prefix" : "tech.",
+      "multimsg" : 1
+    }
+  ]
+}

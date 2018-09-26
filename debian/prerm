@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# prerm
+
+# Stop the service
+service brubeck-biz  stop
+service brubeck-tech stop
+
+# Remove the daemon
+update-rc.d brubeck-biz  remove
+update-rc.d brubeck-tech remove
