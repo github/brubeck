@@ -5,12 +5,13 @@ cd $WD
 
 EXEC='../brubeck'
 if [ ! -x "$EXEC" ]; then
-	echo "Error: brubeck executible not found, please run build."
+	echo "Error: brubeck executible not found, please run build first."
 	exit 1
 fi
 
 TMP=$(mktemp -d)
-ROOT=$TMP/brubeck-fiverr
+VER=$(git rev-parse --short HEAD)
+ROOT=$TMP/brubeck-fiverr-$VER
 DEB=$ROOT/DEBIAN
 ETC=$ROOT/etc
 BIN=$ROOT/usr/local/bin

@@ -156,18 +156,18 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		while (*buffer != ':' && *buffer != '\0') {
 			/* Invalid metric, can't have a space */
 			if (*buffer == ' ')
-				return -1;
+				return -2;
 			++buffer;
 		}
 		if (*buffer == '\0')
-			return -1;
+			return -3;
 
 		msg->key_len = buffer - msg->key;
 		*buffer++ = '\0';
 
 		/* Corrupted metric. Graphite won't swallow this */
 		if (msg->key[msg->key_len - 1] == '.')
-			return -1;
+			return -4;
 	}
 
 	/**
@@ -182,7 +182,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		buffer = parse_float(buffer, &msg->value, &msg->modifiers);
 
 		if (*buffer != '|')
-			return -1;
+			return -5;
 
 		buffer++;
 	}
@@ -197,9 +197,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	{
 		switch (*buffer) {
 			case 'g': msg->type = BRUBECK_MT_GAUGE; break;
-			case 'c': msg->type = BRUBECK_MT_METER; break;
-			case 'C': msg->type = BRUBECK_MT_COUNTER; break;
-			case 'h': msg->type = BRUBECK_MT_HISTO; break;
+			case 'c': msg->type = BRUBECK_MT_COUNTER; break;
 			case 'm':
 					  ++buffer;
 					  if (*buffer == 's') {
@@ -208,7 +206,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 					  }
 
 			default:
-					  return -1;
+					  return -6;
 		}
 
 		buffer++;
@@ -228,7 +226,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 
 			buffer = parse_float(buffer + 2, &sample_rate, &dummy);
 			if (sample_rate <= 0.0 || sample_rate > 1.0)
-				return -1;
+				return -7;
 
 			msg->sample_freq = (1.0 / sample_rate);
 		} else {
@@ -239,7 +237,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0'))
 			return 0;
 			
-		return -1;
+		return -8;
 	}
 }
 
@@ -247,19 +245,20 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 {
 	struct brubeck_statsd_msg msg;
 	struct brubeck_metric *metric;
+	int return_code;
 
 	while (buffer < end) {
 		char *stat_end = memchr(buffer, '\n', end - buffer);
 		if (!stat_end)
 			stat_end = end;
 
-		if (brubeck_statsd_msg_parse(&msg, buffer, stat_end) < 0) {
+		return_code = brubeck_statsd_msg_parse(&msg, buffer, stat_end);
+		if (return_code < 0) {
 			brubeck_stats_inc(server, errors);
-			log_splunk("sampler=statsd event=packet_drop");
+			log_splunk("sampler=statsd event=packet_drop return_code=%d key=%s", return_code, buffer);
 		} else {
 			add_prefix(&msg, key_prefix);
-			//log_splunk("sampler=statsd key_len=%03d key=%s",msg.key_len, msg.key);
-			
+
 			brubeck_stats_inc(server, metrics);
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 			if (metric != NULL)
@@ -275,10 +274,8 @@ char *type2prefix(uint8_t type) {
 
     switch (type) {
       case BRUBECK_MT_TIMER:   return "timers.";
-      case BRUBECK_MT_METER:   return "counters.";
       case BRUBECK_MT_COUNTER: return "counters.";
       case BRUBECK_MT_GAUGE:   return "gauges.";
-      case BRUBECK_MT_HISTO:   return "histograms.";
       default:                 return "unknown.";
     }
 }

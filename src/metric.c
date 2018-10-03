@@ -107,45 +107,45 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  *
  * ALLOC: mt + 4 + 4 + 4
  *********************************************/
-static void
-counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
-{
-	/* upsample */
-	value *= sample_freq;
-
-	pthread_spin_lock(&metric->lock);
-	{
-		if (metric->as.counter.previous > 0.0) {
-			value_t diff = (value >= metric->as.counter.previous) ?
-				(value - metric->as.counter.previous) :
-				(value);
-
-			metric->as.counter.value += diff;
-		}
-
-		metric->as.counter.previous = value;
-	}
-	pthread_spin_unlock(&metric->lock);
-}
-
-static void
-counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
-{
-	value_t value;
-
-	pthread_spin_lock(&metric->lock);
-	{
-		value = metric->as.counter.value;
-		metric->as.counter.value = 0.0;
-	}
-	pthread_spin_unlock(&metric->lock);
-
-	sample(metric->key, value, opaque);
-}
+//static void
+//counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
+//{
+//	/* upsample */
+//	value *= sample_freq;
+//
+//	pthread_spin_lock(&metric->lock);
+//	{
+//		if (metric->as.counter.previous > 0.0) {
+//			value_t diff = (value >= metric->as.counter.previous) ?
+//				(value - metric->as.counter.previous) :
+//				(value);
+//
+//			metric->as.counter.value += diff;
+//		}
+//
+//		metric->as.counter.previous = value;
+//	}
+//	pthread_spin_unlock(&metric->lock);
+//}
+//
+//static void
+//counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+//{
+//	value_t value;
+//
+//	pthread_spin_lock(&metric->lock);
+//	{
+//		value = metric->as.counter.value;
+//		metric->as.counter.value = 0.0;
+//	}
+//	pthread_spin_unlock(&metric->lock);
+//
+//	sample(metric->key, value, opaque);
+//}
 
 
 /*********************************************
- * Histogram / Timer
+ * Histogram / Timer / Counter
  *
  * ALLOC: mt + 16 + 4
  *********************************************/
@@ -182,14 +182,14 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 		sample(key, hsample.count, opaque);
 	}
 
-	WITH_SUFFIX(".count_ps") {
+	WITH_SUFFIX(".rate") {
 		struct brubeck_backend *backend = opaque;
 		sample(key, hsample.count / (double)backend->sample_freq, opaque);
 	}
 
 	/* if there have been no metrics during this sampling period,
 	 * we don't need to report any of the histogram samples */
-	if (hsample.count == 0.0)
+	if (hsample.count == 0.0 || metric->type == BRUBECK_MT_COUNTER)
 		return;
 
 	WITH_SUFFIX(".min") {
@@ -253,8 +253,8 @@ static struct brubeck_metric__proto {
 
 	/* Counter */
 	{
-		&counter__record,
-		&counter__sample
+		&histogram__record,
+		&histogram__sample
 	},
 
 	/* Histogram */
