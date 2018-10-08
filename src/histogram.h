@@ -8,17 +8,18 @@ struct brubeck_histo {
 };
 
 struct brubeck_histo_sample {
-	value_t sum;
-	value_t min;
-	value_t max;
-	value_t mean;
-	value_t median;
 	value_t count;
-
-	value_t percentile[5];
+	value_t count_90;
+	value_t lower;
+	value_t mean;
+	value_t mean_90;
+	value_t median;
+	value_t std;
+	value_t sum;
+	value_t sum_90;
+	value_t upper;
+	value_t upper_90;
 };
-
-enum { PC_75, PC_95, PC_98, PC_99, PC_999 };
 
 void brubeck_histo_push(struct brubeck_histo *histo, value_t value, value_t sample_rate);
 void brubeck_histo_sample(

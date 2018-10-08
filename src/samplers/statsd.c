@@ -155,8 +155,11 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		msg->key_len = 0;
 		while (*buffer != ':' && *buffer != '\0') {
 			/* Invalid metric, can't have a space */
-			if (*buffer == ' ')
-				return -2;
+                        if (*buffer == ' ')
+                                return -2;
+			//if (*buffer == ' ') *buffer = '_';
+			if (*buffer == '/')
+				*buffer = '-';
 			++buffer;
 		}
 		if (*buffer == '\0')
@@ -258,6 +261,11 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 			log_splunk("sampler=statsd event=packet_drop return_code=%d key=%s", return_code, buffer);
 		} else {
 			add_prefix(&msg, key_prefix);
+/*
+			if (strstr(msg.key, "/") != NULL) {
+				log_splunk("sampler=statsd event=debug buffer=%s", msg.key);
+			}
+*/
 
 			brubeck_stats_inc(server, metrics);
 			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
@@ -364,7 +372,7 @@ brubeck_statsd_new(struct brubeck_server *server, json_t *settings)
 
 	if (prefix) {
 		strcpy(std->key_prefix.str, prefix);
-		std->key_prefix.str_len = strlen(prefix);
+		std->key_prefix.str_len = strlen(std->key_prefix.str);
 	}
 
 	brubeck_sampler_init_inet(&std->sampler, server, address, port);

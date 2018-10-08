@@ -32,8 +32,6 @@ void test_statsd_msg__parse_strings(void)
 	must_parse("github.auth.fingerprint.sha1:1|c|@0.1", 1, 10.0, 0);
 	must_parse("github.auth.fingerprint.sha1:1|g", 1, 1.0, 0);
 	must_parse("lol:1|ms", 1, 1.0, 0);
-	must_parse("this.is.sparta:199812|C", 199812, 1.0, 0);
-	must_parse("this.is.sparta:0012|h", 12, 1.0, 0);
 	must_parse("this.is.sparta:23.23|g", 23.23, 1.0, 0);
 	must_parse("this.is.sparta:0.232030|g", 0.23203, 1.0, 0);
 	must_parse("this.are.some.floats:1234567.89|g", 1234567.89, 1.0, 0);
