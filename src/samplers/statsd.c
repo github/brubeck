@@ -153,20 +153,28 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	{
 		msg->key = buffer;
 		msg->key_len = 0;
+		char *p = buffer; /* p points to the most current "accepted" char. */
 		while (*buffer != ':' && *buffer != '\0') {
-			/* Invalid metric, can't have a space */
-                        if (*buffer == ' ')
-                                return -2;
-			//if (*buffer == ' ') *buffer = '_';
-			if (*buffer == '/')
-				*buffer = '-';
+			if (*buffer == ' ') *buffer = '_';
+			else if (*buffer == '/') *buffer = '-';
+
+			// valid chars: 0-9 a-z A-Z _ - .
+			if (
+				(*buffer >= '0' && *buffer <= '9') ||
+				(*buffer >= 'a' && *buffer <= 'z') ||
+				(*buffer >= 'A' && *buffer <= 'Z') || 
+				*buffer == '_' || *buffer == '-' || *buffer == '.') {
+					*p++ = *buffer;
+					++msg->key_len;
+			}
+
 			++buffer;
 		}
 		if (*buffer == '\0')
 			return -3;
 
-		msg->key_len = buffer - msg->key;
 		*buffer++ = '\0';
+		*p = '\0';
 
 		/* Corrupted metric. Graphite won't swallow this */
 		if (msg->key[msg->key_len - 1] == '.')
@@ -254,6 +262,12 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 		char *stat_end = memchr(buffer, '\n', end - buffer);
 		if (!stat_end)
 			stat_end = end;
+
+/*
+		if (strstr(buffer, "kafka.ravens.Eagle") != NULL) {
+			log_splunk("sampler=statsd event=debug buffer=%s", buffer);
+		}
+*/
 
 		return_code = brubeck_statsd_msg_parse(&msg, buffer, stat_end);
 		if (return_code < 0) {
