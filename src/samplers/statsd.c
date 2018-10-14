@@ -264,7 +264,7 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 			stat_end = end;
 
 /*
-		if (strstr(buffer, "kafka.ravens.Eagle") != NULL) {
+		if (strstr(buffer, "mobile_srv") != NULL) {
 			log_splunk("sampler=statsd event=debug buffer=%s", buffer);
 		}
 */

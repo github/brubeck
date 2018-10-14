@@ -74,7 +74,7 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4
  *********************************************/
 static void
-meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
+counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
 {
 	/* upsample */
 	value *= sample_freq;
@@ -87,9 +87,13 @@ meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq,
 }
 
 static void
-meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
 {
 	value_t value;
+	char *key;
+
+	key = alloca(metric->key_len + strlen(".count") + 1);
+        memcpy(key, metric->key, metric->key_len);
 
 	pthread_spin_lock(&metric->lock);
 	{
@@ -98,7 +102,14 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	}
 	pthread_spin_unlock(&metric->lock);
 
-	sample(metric->key, value, opaque);
+	WITH_SUFFIX(".count") {
+                sample(key, value, opaque);
+        }
+
+        WITH_SUFFIX(".rate") {
+                struct brubeck_backend *backend = opaque;
+                sample(key, value / (double)backend->sample_freq, opaque);
+        }
 }
 
 
@@ -251,14 +262,14 @@ static struct brubeck_metric__proto {
 
 	/* Meter */
 	{
-		&meter__record,
-		&meter__sample
+		&counter__record,
+		&counter__sample
 	},
 
 	/* Counter */
 	{
-		&histogram__record,
-		&histogram__sample
+		&counter__record,
+		&counter__sample
 	},
 
 	/* Histogram */
