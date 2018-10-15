@@ -6,6 +6,10 @@
 service brubeck-biz  stop
 service brubeck-tech stop
 
+# Remove the service
+rm /etc/init.d/brubeck-biz
+rm /etc/init.d/brubeck-tech
+
 # Remove the daemon
-update-rc.d brubeck-biz  remove
-update-rc.d brubeck-tech remove
+update-rc.d brubeck-biz  remove -f
+update-rc.d brubeck-tech remove -f
