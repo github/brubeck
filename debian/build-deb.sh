@@ -16,9 +16,9 @@ DEB=$ROOT/DEBIAN
 ETC=$ROOT/etc
 BIN=$ROOT/usr/local/bin
 
-mkdir -p $ETC/init.d $DEB $BIN
+mkdir -p $ETC/init.d $ETC/brubeck/ $DEB $BIN
 cp -v control postinst prerm $DEB
-cp -v brubeck-biz.json brubeck-tech.json $ETC
+cp -v biz.json tech.json $ETC/brubeck/
 cp -v initd-biz.sh  $ETC/init.d/brubeck-biz
 cp -v initd-tech.sh $ETC/init.d/brubeck-tech
 cp -v $EXEC $BIN

@@ -2,7 +2,7 @@
   "sharding" : false,
   "server_name" : "graphite_brubeck",
   "dumpfile" : "./brubeck.dump",
-  "capacity" : 20,
+  "capacity" : 15,
   "expire" : 20,
   "http" : ":8080",
 
