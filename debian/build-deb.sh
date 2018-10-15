@@ -10,8 +10,9 @@ if [ ! -x "$EXEC" ]; then
 fi
 
 TMP=$(mktemp -d)
-VER=$(awk '/Version:/ {print $2}')
-ROOT=$TMP/brubeck-fiverr-$VER
+VER=$(awk '/Version:/ {print $2}' control)
+ARCH=$(awk '/Architecture:/ {print $2}' control)
+ROOT=$TMP/brubeck-fiverr_${VER}_${ARCH}
 DEB=$ROOT/DEBIAN
 ETC=$ROOT/etc
 BIN=$ROOT/usr/local/bin
