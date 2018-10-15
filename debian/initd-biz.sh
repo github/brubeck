@@ -13,7 +13,7 @@
 NAME="brubeck"
 PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 APPDIR="/"
-APPBIN="/usr/bin/brubeck"
+APPBIN="/usr/local/bin/brubeck"
 APPARGS="-f /etc/brubeck/biz.json"
 USER="brubeck"
 GROUP="brubeck"
