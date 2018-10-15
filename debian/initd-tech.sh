@@ -14,7 +14,7 @@ NAME="brubeck-tech"
 PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 APPDIR="/"
 APPBIN="/usr/local/bin/brubeck"
-APPARGS="--config=/etc/brubeck/tech.json"
+APPARGS="--config=/etc/brubeck/tech.json &> /var/log/brubeck/tech.txt"
 USER="brubeck"
 GROUP="brubeck"
 

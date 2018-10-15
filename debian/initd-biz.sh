@@ -14,7 +14,7 @@ NAME="brubeck-biz"
 PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 APPDIR="/"
 APPBIN="/usr/local/bin/brubeck"
-APPARGS="--config=/etc/brubeck/biz.json"
+APPARGS="--config=/etc/brubeck/biz.json &> /var/log/brubeck/biz.txt"
 USER="brubeck"
 GROUP="brubeck"
 

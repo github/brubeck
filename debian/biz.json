@@ -4,7 +4,7 @@
   "dumpfile" : "./brubeck.dump",
   "capacity" : 15,
   "expire" : 20,
-  "http" : ":8080",
+  "http" : ":8090",
 
   "backends" : [
     {
