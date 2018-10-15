@@ -10,11 +10,11 @@
 # Description:       Example start-stop-daemon - Debian
 ### END INIT INFO
 
-NAME="brubeck"
+NAME="brubeck-tech"
 PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 APPDIR="/"
 APPBIN="/usr/local/bin/brubeck"
-APPARGS="-f /etc/brubeck/tech.json"
+APPARGS="--config=/etc/brubeck/tech.json"
 USER="brubeck"
 GROUP="brubeck"
 
@@ -50,7 +50,7 @@ stop() {
 }
 
 status() {
-  status_of_proc -p /var/run/$NAME.pid "" $NAME && exit 0 || exit $?
+  status_of_proc -p /var/run/$NAME.pid $APPBIN $NAME && exit 0 || exit $?
 }
 
 case "$1" in
