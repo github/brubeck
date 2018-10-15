@@ -22,6 +22,7 @@ cp -v control postinst prerm $DEB
 cp -v biz.json tech.json $ETC/brubeck/
 cp -v initd-biz.sh  $ETC/init.d/brubeck-biz
 cp -v initd-tech.sh $ETC/init.d/brubeck-tech
+chmod +x $ETC/init.d/brubeck-biz $ETC/init.d/brubeck-tech
 cp -v $EXEC $BIN
 
 dpkg-deb --build $ROOT

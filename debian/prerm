@@ -13,3 +13,6 @@ rm /etc/init.d/brubeck-tech
 # Remove the daemon
 update-rc.d brubeck-biz  remove -f
 update-rc.d brubeck-tech remove -f
+
+# Remove group
+userdel brubeck
