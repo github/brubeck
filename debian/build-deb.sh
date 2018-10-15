@@ -10,7 +10,7 @@ if [ ! -x "$EXEC" ]; then
 fi
 
 TMP=$(mktemp -d)
-VER=$(git rev-parse --short HEAD)
+VER=$(awk '/Version:/ {print $2}')
 ROOT=$TMP/brubeck-fiverr-$VER
 DEB=$ROOT/DEBIAN
 ETC=$ROOT/etc
