@@ -7,7 +7,7 @@
 #include <time.h>
 
 const char *gh_log_instance(void);
-const char *gh_log_time(void);
+char *gh_log_time(void);
 void gh_log_set_time(char *time_str);
 void gh_log_set_instance(const char *instance);
 void gh_log_open(const char *path);

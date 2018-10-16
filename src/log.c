@@ -53,12 +53,14 @@ void gh_log_reopen(void)
 		gh_log_open(gh_log_path);
 }
 
+char _time_str[26];
+
 void gh_log_write(const char *message, ...)
 {
 	va_list vl;
 	va_start(vl, message);
 
-  gh_log_set_time(_time_str);
+	gh_log_set_time(_time_str);
 
 	if (gh_syslog_enabled) {
 		vsyslog(LOG_INFO, message, vl);
@@ -86,9 +88,12 @@ const char *gh_log_instance(void)
 	return _app_instance;
 }
 
-static const char _time_str[26];
+void gh_log_set_instance(const char *instance)
+{
+	_app_instance = instance;
+}
 
-const char *gh_log_time(void)
+char *gh_log_time(void)
 {
   return _time_str;
 }
@@ -102,9 +107,4 @@ void gh_log_set_time(char *time_str)
     tm_info = localtime(&timer);
 
     strftime(time_str, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-}
-
-void gh_log_set_instance(const char *instance)
-{
-	_app_instance = instance;
 }
