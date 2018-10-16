@@ -7,9 +7,6 @@ useradd brubeck
 update-rc.d brubeck-biz  defaults
 update-rc.d brubeck-tech defaults
 
-# Create log folder
-mkdir -p /var/log/brubeck
-
 # Start the service
 service brubeck-biz  start
 service brubeck-tech start
