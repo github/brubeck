@@ -11,66 +11,71 @@
 ### END INIT INFO
 
 NAME="brubeck-biz"
-PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
-APPDIR="/"
+PIDFILE="/var/run/$NAME.pid"
+APPDIR="/usr/local/bin"
 APPBIN="/usr/local/bin/brubeck"
 APPARGS="--config=/etc/brubeck/biz.json &> /var/log/brubeck/biz.txt"
-USER="brubeck"
-GROUP="brubeck"
+LOGFILE="/var/log/brubeck/biz.log"
 
-# Include functions 
-set -e
+# Include functions
 . /lib/lsb/init-functions
 
 start() {
-  printf "Starting '$NAME'... "
-  start-stop-daemon --start --chuid "$USER:$GROUP" --background --make-pidfile --pidfile /var/run/$NAME.pid --chdir "$APPDIR" --exec "$APPBIN" -- $APPARGS || true
-  printf "done\n"
+    if [ -e $PIDFILE ]; then
+        status_of_proc -p ${PIDFILE} ${APPBIN} "${NAME} process" && status="0" || status="$?"
+        if [ $status = "0" ]; then
+            echo "Nothing to do."
+            exit
+        fi
+    fi
+    echo "Starting ${NAME} process"
+    cd ${APPDIR}
+    ${APPBIN} ${APPARGS} >> ${LOGFILE} 2>&1 &
+    echo $! > ${PIDFILE}
+    echo "Done."
 }
-
-#We need this function to ensure the whole process tree will be killed
-killtree() {
-    local _pid=$1
-    local _sig=${2-TERM}
-    for _child in $(ps -o pid --no-headers --ppid ${_pid}); do
-        killtree ${_child} ${_sig}
-    done
-    kill -${_sig} ${_pid}
-}
-
 stop() {
-  printf "Stopping '$NAME'... "
-  [ -z `cat /var/run/$NAME.pid 2>/dev/null` ] || \
-  while test -d /proc/$(cat /var/run/$NAME.pid); do
-    killtree $(cat /var/run/$NAME.pid) 15
-    sleep 0.5
-  done 
-  [ -z `cat /var/run/$NAME.pid 2>/dev/null` ] || rm /var/run/$NAME.pid
-  printf "done\n"
+    if [ -e $PIDFILE ]; then
+        status_of_proc -p ${PIDFILE} ${APPBIN} "${NAME} process" && status="0" || status="$?"
+        if [ $status = "0" ]; then
+            echo "Stopping ${NAME}."
+            start-stop-daemon --stop --quiet --oknodo --pidfile ${PIDFILE}
+            rm -rf ${PIDFILE}
+        fi
+    else
+        echo "${NAME} is not running, nothing to do."
+    fi
 }
 
-status() {
-  status_of_proc -p /var/run/$NAME.pid $APPBIN $NAME && exit 0 || exit $?
+
+status(){
+    if [ -e ${PIDFILE} ]; then
+        status_of_proc -p ${PIDFILE} ${APPBIN} "${NAME} process" && status="0" || status="$?"
+        if [ $status = "0" ]; then
+            exit 0
+        fi
+    else
+        echo "${NAME} process is not running"
+    fi
 }
+
+
 
 case "$1" in
-  start)
-    start
-    ;;
-  stop)
-    stop
-    ;;
-  restart)
-    stop
-    start
-    ;;
-  status)
-    status
-    ;;
-  *)
-    echo "Usage: $NAME {start|stop|restart|status}" >&2
-    exit 1
-    ;;
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 2
+        start
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
 esac
-
-exit 0
