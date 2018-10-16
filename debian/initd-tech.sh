@@ -15,7 +15,8 @@ PIDFILE="/var/run/$NAME.pid"
 APPDIR="/usr/local/bin"
 APPBIN="/usr/local/bin/brubeck"
 LOGFILE="/var/log/brubeck/tech.log"
-APPARGS="--config=/etc/brubeck/tech.json --log=$LOGFILE"
+CONFIGFILE="/etc/brubeck/tech.json"
+APPARGS="--config=$CONFIGFILE --log=$LOGFILE"
 
 # Include functions
 . /lib/lsb/init-functions
