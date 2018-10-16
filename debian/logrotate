@@ -1,10 +1,10 @@
 /var/log/brubeck/*.log {
-	weekly
-	missingok
-	rotate 8
-	compress
-	notifempty
-	nocreate
-	copytruncate
+    weekly
+    missingok
+    rotate 8
+    compress
+    notifempty
+    nocreate
+    copytruncate
     size 20M
 }
