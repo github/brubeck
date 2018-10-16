@@ -7,6 +7,8 @@
 #include <time.h>
 
 const char *gh_log_instance(void);
+const char *gh_log_time(void);
+void gh_log_set_time(char *time_str);
 void gh_log_set_instance(const char *instance);
 void gh_log_open(const char *path);
 void gh_log_reopen(void);
@@ -14,7 +16,7 @@ void gh_log_die(void) __attribute__ ((noreturn));
 void gh_log_write(const char *message, ...) 
 	__attribute__((format (printf, 1, 2)));
 
-#define log_splunk(M, ...) gh_log_write("instance=%s " M "\n", gh_log_instance(), ##__VA_ARGS__);
+#define log_splunk(M, ...) gh_log_write("%s instance=%s " M "\n", gh_log_time(), gh_log_instance(), ##__VA_ARGS__);
 
 #define log_splunk_errno(M, ...) log_splunk( \
 	M " errno=%d msg=\"%s\"", ##__VA_ARGS__, errno, strerror(errno));
