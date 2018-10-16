@@ -14,8 +14,9 @@ NAME="brubeck-tech"
 PIDFILE="/var/run/$NAME.pid"
 APPDIR="/usr/local/bin"
 APPBIN="/usr/local/bin/brubeck"
-APPARGS="--config=/etc/brubeck/tech.json &> /var/log/brubeck/tech.txt"
 LOGFILE="/var/log/brubeck/tech.log"
+CONFIGFILE="/etc/brubeck/tech.json"
+APPARGS="--config=$CONFIGFILE --log=$LOGFILE"
 
 # Include functions
 . /lib/lsb/init-functions
@@ -30,7 +31,7 @@ start() {
     fi
     echo "Starting ${NAME} process"
     cd ${APPDIR}
-    ${APPBIN} ${APPARGS} >> ${LOGFILE} 2>&1 &
+    ${APPBIN} ${APPARGS} &
     echo $! > ${PIDFILE}
     echo "Done."
 }
