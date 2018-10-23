@@ -162,7 +162,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 			if (
 				(*buffer >= '0' && *buffer <= '9') ||
 				(*buffer >= 'a' && *buffer <= 'z') ||
-				(*buffer >= 'A' && *buffer <= 'Z') || 
+				(*buffer >= 'A' && *buffer <= 'Z') ||
 				*buffer == '_' || *buffer == '-' || *buffer == '.') {
 					*p++ = *buffer;
 					++msg->key_len;
@@ -280,11 +280,14 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 				log_splunk("sampler=statsd event=debug buffer=%s", msg.key);
 			}
 */
+			// ignore too long keys
+			if (msg.key_len > 250) {
 
-			brubeck_stats_inc(server, metrics);
-			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
-			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value, msg.sample_freq, msg.modifiers);
+				brubeck_stats_inc(server, metrics);
+				metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
+				if (metric != NULL)
+					brubeck_metric_record(metric, msg.value, msg.sample_freq, msg.modifiers);
+			}
 		}
 
 		/* move buf past this stat */
