@@ -281,13 +281,14 @@ void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, ch
 			}
 */
 			// ignore too long keys
-			if (msg.key_len > 250) {
-
+			if (msg.key_len <= 256) {
 				brubeck_stats_inc(server, metrics);
 				metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
 				if (metric != NULL)
 					brubeck_metric_record(metric, msg.value, msg.sample_freq, msg.modifiers);
-			}
+			} else {
+        log_splunk("sampler=statsd event=key_too_long key=%s", msg.key);
+      }
 		}
 
 		/* move buf past this stat */
