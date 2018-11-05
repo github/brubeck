@@ -98,7 +98,7 @@ void brubeck_histo_sample(
 	sample->upper = histo->values[histo->size - 1];
 	sample->upper_90 = histo->values[(size_t)pct_rank - 1];
 	sample->mean = sample->sum / histo->count;
-	sample->mean_90 = sample->sum_90 / (pct_rank * histo->count);
+	sample->mean_90 = sample->sum_90 / pct_rank;
 	sample->median = histo_percentile(histo, 0.5f);
 	sample->count = histo->count;
 	sample->count_90 = histo->count * 0.9;
