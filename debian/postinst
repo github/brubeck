@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# postinst
+useradd brubeck
+
+# Enable the daemon
+update-rc.d brubeck-biz  defaults
+update-rc.d brubeck-tech defaults
+
+# Start the service
+service brubeck-biz  start
+service brubeck-tech start
+

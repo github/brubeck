@@ -12,11 +12,17 @@ struct brubeck_statsd_msg {
 	uint8_t modifiers; /* modifiers, as a brubeck_metric_mod_t */
 };
 
+struct key_prefix {
+	char str[256];
+	uint16_t str_len;
+};
+
 struct brubeck_statsd {
 	struct brubeck_sampler sampler;
 	pthread_t *workers;
 	unsigned int worker_count;
 	unsigned int mmsg_count;
+	struct key_prefix key_prefix;
 };
 
 struct brubeck_statsd_secure {
@@ -30,10 +36,13 @@ struct brubeck_statsd_secure {
 	pthread_t thread;
 };
 
-void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, char *end);
+void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, char *end, struct key_prefix *key_prefix);
 int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char *end);
 
 struct brubeck_sampler * brubeck_statsd_secure_new(struct brubeck_server *server, json_t *settings);
 struct brubeck_sampler *brubeck_statsd_new(struct brubeck_server *server, json_t *settings);
+
+char * type2prefix(uint8_t type);
+void add_prefix(struct brubeck_statsd_msg *msg, struct key_prefix *key_prefix);
 
 #endif

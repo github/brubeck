@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <syslog.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "log.h"
 
@@ -52,10 +53,14 @@ void gh_log_reopen(void)
 		gh_log_open(gh_log_path);
 }
 
+char _time_str[26];
+
 void gh_log_write(const char *message, ...)
 {
 	va_list vl;
 	va_start(vl, message);
+
+	gh_log_set_time(_time_str);
 
 	if (gh_syslog_enabled) {
 		vsyslog(LOG_INFO, message, vl);
@@ -86,4 +91,20 @@ const char *gh_log_instance(void)
 void gh_log_set_instance(const char *instance)
 {
 	_app_instance = instance;
+}
+
+char *gh_log_time(void)
+{
+  return _time_str;
+}
+
+void gh_log_set_time(char *time_str)
+{
+    time_t timer;
+    struct tm* tm_info;
+
+    time(&timer);
+    tm_info = localtime(&timer);
+
+    strftime(time_str, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 }

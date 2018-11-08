@@ -28,21 +28,40 @@ void brubeck_histo_push(struct brubeck_histo *histo, value_t value, value_t samp
 	histo->values[histo->size++] = value;
 }
 
-static inline value_t histo_percentile(struct brubeck_histo *histo, float rank)
+static inline value_t histo_percentile_rank(struct brubeck_histo *histo, float rank)
 {
-	size_t irank = floor((rank * histo->size) + 0.5f);
-	return histo->values[irank - 1];
+    size_t irank = floor((rank * histo->size) + 0.5f);
+    return irank;
 }
 
-static inline value_t histo_sum(struct brubeck_histo *histo)
+static inline value_t histo_percentile(struct brubeck_histo *histo, float rank)
+{
+    size_t irank = histo_percentile_rank(histo, rank);
+    return histo->values[irank - 1];
+}
+
+static inline value_t histo_sum(struct brubeck_histo *histo, size_t values_size)
+{
+    size_t i;
+    value_t sum = 0.0;
+
+    value_t rate = (value_t) histo->count / histo->size;
+
+    for (i = 0; i < values_size; ++i)
+        sum += histo->values[i] * rate;
+
+    return sum;
+}
+
+static inline value_t histo_std(struct brubeck_histo *histo, value_t mean)
 {
 	size_t i;
-	value_t sum = 0.0;
+	value_t sum_of_diffs = 0.0;
 
 	for (i = 0; i < histo->size; ++i)
-		sum += histo->values[i];
+		sum_of_diffs += (histo->values[i] - mean) * (histo->values[i] - mean);
 
-	return sum;
+	return sqrt(sum_of_diffs / histo->size);
 }
 
 static int value_cmp(const void *a, const void *b)
@@ -71,18 +90,19 @@ void brubeck_histo_sample(
 
 	histo_sort(histo);
 
-	sample->sum = histo_sum(histo);
-	sample->min = histo->values[0];
-	sample->max = histo->values[histo->size - 1];
-	sample->mean = sample->sum / histo->size;
-	sample->median = histo_percentile(histo, 0.5f);
-	sample->count = histo->count;
+	value_t pct_rank = histo_percentile_rank(histo, 0.9f);
 
-	sample->percentile[PC_75] = histo_percentile(histo, 0.75f);
-	sample->percentile[PC_95] = histo_percentile(histo, 0.95f);
-	sample->percentile[PC_98] = histo_percentile(histo, 0.98f);
-	sample->percentile[PC_99] = histo_percentile(histo, 0.99f);
-	sample->percentile[PC_999] = histo_percentile(histo, 0.999f);
+	sample->count = histo->count;
+	sample->count_90 = histo->count * 0.9;
+	sample->sum = histo_sum(histo, histo->size);
+	sample->sum_90 = histo_sum(histo, pct_rank);
+	sample->lower = histo->values[0];
+	sample->upper = histo->values[histo->size - 1];
+	sample->upper_90 = histo->values[(size_t)pct_rank - 1];
+	sample->mean = sample->sum / histo->count;
+	sample->mean_90 = sample->sum_90 / sample->count_90;
+	sample->median = histo_percentile(histo, 0.5f);
+	sample->std = histo_std(histo, sample->mean);
 
 	/* empty the histogram */
 	histo->size = 0;

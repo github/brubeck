@@ -16,6 +16,18 @@ static void must_parse(const char *msg_text, double value, double sample, uint8_
 	sput_fail_unless(modifiers == msg.modifiers, "msg.modifiers == expected");
 }
 
+static void must_sanitize_key(const char *msg_text, const char *expected_key)
+{
+	struct brubeck_statsd_msg msg;
+	char buffer[128];
+	size_t len = strlen(msg_text);
+	memcpy(buffer, msg_text, len);
+
+	sput_fail_unless(brubeck_statsd_msg_parse(&msg, buffer, buffer + len) == 0, msg_text);
+	sput_fail_unless(strcmp(msg.key, expected_key) == 0, expected_key);
+	//sput_fail_unless(strcmp(msg.key, expected_key) == 0, "msg.key == expected");
+}
+
 static void must_not_parse(const char *msg_text)
 {
 	struct brubeck_statsd_msg msg;
@@ -32,8 +44,6 @@ void test_statsd_msg__parse_strings(void)
 	must_parse("github.auth.fingerprint.sha1:1|c|@0.1", 1, 10.0, 0);
 	must_parse("github.auth.fingerprint.sha1:1|g", 1, 1.0, 0);
 	must_parse("lol:1|ms", 1, 1.0, 0);
-	must_parse("this.is.sparta:199812|C", 199812, 1.0, 0);
-	must_parse("this.is.sparta:0012|h", 12, 1.0, 0);
 	must_parse("this.is.sparta:23.23|g", 23.23, 1.0, 0);
 	must_parse("this.is.sparta:0.232030|g", 0.23203, 1.0, 0);
 	must_parse("this.are.some.floats:1234567.89|g", 1234567.89, 1.0, 0);
@@ -70,4 +80,8 @@ void test_statsd_msg__parse_strings(void)
 	must_not_parse("this.are.some.floats:1.0|g|@-0.23");
 	must_not_parse("this.are.some.floats:1.0|g|@0.0");
 	must_not_parse("this.are.some.floats:1.0|g|@0");
+
+	must_sanitize_key("replace.space.in.key name:1|c","replace.space.in.key_name");
+	must_sanitize_key("replace.slash.in.key/name:1|c","replace.slash.in.key-name");
+	must_sanitize_key("remove.non.alphanumeric.chars.from.key*#name:1|c","remove.non.alphanumeric.chars.from.keyname");
 }

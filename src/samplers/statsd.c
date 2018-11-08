@@ -10,7 +10,7 @@
 #	endif
 #endif
 
-#define MAX_PACKET_SIZE 8192
+#define MAX_PACKET_SIZE 65536
 
 #ifdef HAVE_RECVMMSG
 
@@ -56,7 +56,7 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 		for (i = 0; i < SIM_PACKETS; ++i) {
 			char *buf = msgs[i].msg_hdr.msg_iov->iov_base;
 			char *end = buf + msgs[i].msg_len;
-			brubeck_statsd_packet_parse(server, buf, end);
+			brubeck_statsd_packet_parse(server, buf, end, &statsd->key_prefix);
 		}
 	}
 }
@@ -65,6 +65,9 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 {
 	struct brubeck_server *server = statsd->sampler.server;
+	struct key_prefix *key_prefix = xmalloc(sizeof(struct key_prefix));
+	memcpy(key_prefix, &statsd->key_prefix, sizeof(struct key_prefix));
+	
 
 	char *buffer = xmalloc(MAX_PACKET_SIZE);
 	struct sockaddr_in reporter;
@@ -88,7 +91,7 @@ static void statsd_run_recvmsg(struct brubeck_statsd *statsd, int sock)
 		}
 
 		brubeck_atomic_inc(&statsd->sampler.inflow);
-		brubeck_statsd_packet_parse(server, buffer, buffer + res);
+		brubeck_statsd_packet_parse(server, buffer, buffer + res, key_prefix);
 	}
 }
 
@@ -150,21 +153,32 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	{
 		msg->key = buffer;
 		msg->key_len = 0;
+		char *p = buffer; /* p points to the most current "accepted" char. */
 		while (*buffer != ':' && *buffer != '\0') {
-			/* Invalid metric, can't have a space */
-			if (*buffer == ' ')
-				return -1;
+			if (*buffer == ' ') *buffer = '_';
+			else if (*buffer == '/') *buffer = '-';
+
+			// valid chars: 0-9 a-z A-Z _ - .
+			if (
+				(*buffer >= '0' && *buffer <= '9') ||
+				(*buffer >= 'a' && *buffer <= 'z') ||
+				(*buffer >= 'A' && *buffer <= 'Z') ||
+				*buffer == '_' || *buffer == '-' || *buffer == '.') {
+					*p++ = *buffer;
+					++msg->key_len;
+			}
+
 			++buffer;
 		}
 		if (*buffer == '\0')
-			return -1;
+			return -3;
 
-		msg->key_len = buffer - msg->key;
 		*buffer++ = '\0';
+		*p = '\0';
 
 		/* Corrupted metric. Graphite won't swallow this */
 		if (msg->key[msg->key_len - 1] == '.')
-			return -1;
+			return -4;
 	}
 
 	/**
@@ -179,7 +193,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		buffer = parse_float(buffer, &msg->value, &msg->modifiers);
 
 		if (*buffer != '|')
-			return -1;
+			return -5;
 
 		buffer++;
 	}
@@ -194,9 +208,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 	{
 		switch (*buffer) {
 			case 'g': msg->type = BRUBECK_MT_GAUGE; break;
-			case 'c': msg->type = BRUBECK_MT_METER; break;
-			case 'C': msg->type = BRUBECK_MT_COUNTER; break;
-			case 'h': msg->type = BRUBECK_MT_HISTO; break;
+			case 'c': msg->type = BRUBECK_MT_COUNTER; break;
 			case 'm':
 					  ++buffer;
 					  if (*buffer == 's') {
@@ -205,7 +217,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 					  }
 
 			default:
-					  return -1;
+					  return -6;
 		}
 
 		buffer++;
@@ -225,7 +237,7 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 
 			buffer = parse_float(buffer + 2, &sample_rate, &dummy);
 			if (sample_rate <= 0.0 || sample_rate > 1.0)
-				return -1;
+				return -7;
 
 			msg->sample_freq = (1.0 / sample_rate);
 		} else {
@@ -236,33 +248,74 @@ int brubeck_statsd_msg_parse(struct brubeck_statsd_msg *msg, char *buffer, char 
 		if (buffer[0] == '\0' || (buffer[0] == '\n' && buffer[1] == '\0'))
 			return 0;
 			
-		return -1;
+		return -8;
 	}
 }
 
-void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, char *end)
+void brubeck_statsd_packet_parse(struct brubeck_server *server, char *buffer, char *end, struct key_prefix *key_prefix)
 {
 	struct brubeck_statsd_msg msg;
 	struct brubeck_metric *metric;
+	int return_code;
 
 	while (buffer < end) {
 		char *stat_end = memchr(buffer, '\n', end - buffer);
 		if (!stat_end)
 			stat_end = end;
 
-		if (brubeck_statsd_msg_parse(&msg, buffer, stat_end) < 0) {
+/*
+		if (strstr(buffer, "mobile_srv") != NULL) {
+			log_splunk("sampler=statsd event=debug buffer=%s", buffer);
+		}
+*/
+
+		return_code = brubeck_statsd_msg_parse(&msg, buffer, stat_end);
+		if (return_code < 0) {
 			brubeck_stats_inc(server, errors);
-			log_splunk("sampler=statsd event=packet_drop");
+			log_splunk("sampler=statsd event=packet_drop return_code=%d key=%s", return_code, buffer);
 		} else {
-			brubeck_stats_inc(server, metrics);
-			metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
-			if (metric != NULL)
-				brubeck_metric_record(metric, msg.value, msg.sample_freq, msg.modifiers);
+			add_prefix(&msg, key_prefix);
+/*
+			if (strstr(msg.key, "/") != NULL) {
+				log_splunk("sampler=statsd event=debug buffer=%s", msg.key);
+			}
+*/
+			// ignore too long keys
+			if (msg.key_len <= 256) {
+				brubeck_stats_inc(server, metrics);
+				metric = brubeck_metric_find(server, msg.key, msg.key_len, msg.type);
+				if (metric != NULL)
+					brubeck_metric_record(metric, msg.value, msg.sample_freq, msg.modifiers);
+			} else {
+        log_splunk("sampler=statsd event=key_too_long key=%s", msg.key);
+      }
 		}
 
 		/* move buf past this stat */
 		buffer = stat_end + 1;
 	}
+}
+
+char *type2prefix(uint8_t type) {
+
+    switch (type) {
+      case BRUBECK_MT_TIMER:   return "timers.";
+      case BRUBECK_MT_COUNTER: return "counters.";
+      case BRUBECK_MT_GAUGE:   return "gauges.";
+      default:                 return "unknown.";
+    }
+}
+
+void add_prefix(struct brubeck_statsd_msg *msg, struct key_prefix *key_prefix) {
+	char *type_prefix = type2prefix(msg->type);
+	size_t type_prefix_len = strlen(type_prefix);
+
+	memcpy(key_prefix->str + key_prefix->str_len, type_prefix, type_prefix_len);
+	memcpy(key_prefix->str + key_prefix->str_len + type_prefix_len, msg->key, msg->key_len);
+	key_prefix->str[key_prefix->str_len + type_prefix_len + msg->key_len] = '\0';
+
+	msg->key = key_prefix->str;
+	msg->key_len = (uint16_t)(msg->key_len + key_prefix->str_len + type_prefix_len);
 }
 
 static void *statsd__thread(void *_in)
@@ -316,6 +369,7 @@ brubeck_statsd_new(struct brubeck_server *server, json_t *settings)
 	struct brubeck_statsd *std = xmalloc(sizeof(struct brubeck_statsd));
 
 	char *address;
+	char *prefix = NULL;
 	int port;
 	int multisock = 0;
 
@@ -326,12 +380,18 @@ brubeck_statsd_new(struct brubeck_server *server, json_t *settings)
 	std->mmsg_count = 1;
 
 	json_unpack_or_die(settings,
-		"{s:s, s:i, s?:i, s?:i, s?:b}",
+		"{s:s, s:i, s?:i, s?:i, s?:b, s?:s}",
 		"address", &address,
 		"port", &port,
 		"workers", &std->worker_count,
 		"multimsg", &std->mmsg_count,
-		"multisock", &multisock);
+		"multisock", &multisock,
+		"prefix", &prefix);
+
+	if (prefix) {
+		strcpy(std->key_prefix.str, prefix);
+		std->key_prefix.str_len = strlen(std->key_prefix.str);
+	}
 
 	brubeck_sampler_init_inet(&std->sampler, server, address, port);
 

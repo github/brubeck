@@ -74,7 +74,7 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  * ALLOC: mt + 4
  *********************************************/
 static void
-meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
+counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
 {
 	/* upsample */
 	value *= sample_freq;
@@ -87,9 +87,13 @@ meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq,
 }
 
 static void
-meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
 {
 	value_t value;
+	char *key;
+
+	key = alloca(metric->key_len + strlen(".count") + 1);
+        memcpy(key, metric->key, metric->key_len);
 
 	pthread_spin_lock(&metric->lock);
 	{
@@ -98,7 +102,14 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	}
 	pthread_spin_unlock(&metric->lock);
 
-	sample(metric->key, value, opaque);
+	WITH_SUFFIX(".count") {
+                sample(key, value, opaque);
+        }
+
+        WITH_SUFFIX(".rate") {
+                struct brubeck_backend *backend = opaque;
+                sample(key, value / (double)backend->sample_freq, opaque);
+        }
 }
 
 
@@ -107,41 +118,41 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
  *
  * ALLOC: mt + 4 + 4 + 4
  *********************************************/
-static void
-counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
-{
-	/* upsample */
-	value *= sample_freq;
-
-	pthread_spin_lock(&metric->lock);
-	{
-		if (metric->as.counter.previous > 0.0) {
-			value_t diff = (value >= metric->as.counter.previous) ?
-				(value - metric->as.counter.previous) :
-				(value);
-
-			metric->as.counter.value += diff;
-		}
-
-		metric->as.counter.previous = value;
-	}
-	pthread_spin_unlock(&metric->lock);
-}
-
-static void
-counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
-{
-	value_t value;
-
-	pthread_spin_lock(&metric->lock);
-	{
-		value = metric->as.counter.value;
-		metric->as.counter.value = 0.0;
-	}
-	pthread_spin_unlock(&metric->lock);
-
-	sample(metric->key, value, opaque);
-}
+//static void
+//counter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq, uint8_t modifiers)
+//{
+//	/* upsample */
+//	value *= sample_freq;
+//
+//	pthread_spin_lock(&metric->lock);
+//	{
+//		if (metric->as.counter.previous > 0.0) {
+//			value_t diff = (value >= metric->as.counter.previous) ?
+//				(value - metric->as.counter.previous) :
+//				(value);
+//
+//			metric->as.counter.value += diff;
+//		}
+//
+//		metric->as.counter.previous = value;
+//	}
+//	pthread_spin_unlock(&metric->lock);
+//}
+//
+//static void
+//counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opaque)
+//{
+//	value_t value;
+//
+//	pthread_spin_lock(&metric->lock);
+//	{
+//		value = metric->as.counter.value;
+//		metric->as.counter.value = 0.0;
+//	}
+//	pthread_spin_unlock(&metric->lock);
+//
+//	sample(metric->key, value, opaque);
+//}
 
 
 /*********************************************
@@ -182,54 +193,58 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 		sample(key, hsample.count, opaque);
 	}
 
-	WITH_SUFFIX(".count_ps") {
-		struct brubeck_backend *backend = opaque;
-		sample(key, hsample.count / (double)backend->sample_freq, opaque);
+	if (metric->type == BRUBECK_MT_COUNTER) {
+		WITH_SUFFIX(".rate") {
+			struct brubeck_backend *backend = opaque;
+			sample(key, hsample.count / (double)backend->sample_freq, opaque);
+		}
+		return;
 	}
+
 
 	/* if there have been no metrics during this sampling period,
 	 * we don't need to report any of the histogram samples */
 	if (hsample.count == 0.0)
 		return;
-
-	WITH_SUFFIX(".min") {
-		sample(key, hsample.min, opaque);
+	
+	WITH_SUFFIX(".count_90") {
+		sample(key, hsample.count_90, opaque);
 	}
 
-	WITH_SUFFIX(".max") {
-		sample(key, hsample.max, opaque);
+	WITH_SUFFIX(".lower") {
+		sample(key, hsample.lower, opaque);
+	}
+
+	WITH_SUFFIX(".upper") {
+		sample(key, hsample.upper, opaque);
+	}
+
+	WITH_SUFFIX(".upper_90") {
+		sample(key, hsample.upper_90, opaque);
 	}
 
 	WITH_SUFFIX(".sum") {
 		sample(key, hsample.sum, opaque);
 	}
 
+	WITH_SUFFIX(".sum_90") {
+		sample(key, hsample.sum_90, opaque);
+	}
+
 	WITH_SUFFIX(".mean") {
 		sample(key, hsample.mean, opaque);
+	}
+
+	WITH_SUFFIX(".mean_90") {
+		sample(key, hsample.mean_90, opaque);
 	}
 
 	WITH_SUFFIX(".median") {
 		sample(key, hsample.median, opaque);
 	}
-
-	WITH_SUFFIX(".percentile.75") {
-		sample(key, hsample.percentile[PC_75], opaque);
-	}
-
-	WITH_SUFFIX(".percentile.95") {
-		sample(key, hsample.percentile[PC_95], opaque);
-	}
-
-	WITH_SUFFIX(".percentile.98") {
-		sample(key, hsample.percentile[PC_98], opaque);
-	}
-
-	WITH_SUFFIX(".percentile.99") {
-		sample(key, hsample.percentile[PC_99], opaque);
-	}
-
-	WITH_SUFFIX(".percentile.999") {
-		sample(key, hsample.percentile[PC_999], opaque);
+	
+	WITH_SUFFIX(".std") {
+		sample(key, hsample.std, opaque);
 	}
 }
 
@@ -247,8 +262,8 @@ static struct brubeck_metric__proto {
 
 	/* Meter */
 	{
-		&meter__record,
-		&meter__sample
+		&counter__record,
+		&counter__sample
 	},
 
 	/* Counter */

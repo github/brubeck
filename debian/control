@@ -1,0 +1,6 @@
+Package: brubeck-fiverr
+Version: 1.0.9
+Maintainer: Fiverr.com
+Architecture: amd64
+Description: A Statsd-compatible metrics aggregator (https://github.com/fiverr/brubeck)
+Depends: libjansson4 (>= 2.5), libmicrohttpd10 (>= 0.9.33)
