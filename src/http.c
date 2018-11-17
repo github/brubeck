@@ -258,9 +258,30 @@ handle_request(void *cls, struct MHD_Connection *connection,
 void brubeck_http_endpoint_init(struct brubeck_server *server, const char *listen)
 {
 	struct MHD_Daemon *daemon;
+	struct sockaddr_in saddr;
+	char addr[INET_ADDRSTRLEN];
+	size_t len;
 
 	const char *port = strrchr(listen, ':');
-	port = port ? port + 1 : listen;
+
+	memset(&saddr, 0, sizeof(saddr));
+	if (port == NULL)
+		die("invalid connection string");
+
+	if (port == listen)
+		saddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	else {
+		len = port - listen;
+		strncpy(addr, listen, len);
+		addr[len] = '\0';
+		if (inet_pton(AF_INET, addr, &saddr.sin_addr) <= 0)
+			die("invalid HTTP listen address: %s", addr);
+	}
+
+	port++;
+	saddr.sin_port = htons(atoi(port));
+	saddr.sin_family = AF_INET;
+
 
 	daemon = MHD_start_daemon(
 			MHD_USE_SELECT_INTERNALLY,
@@ -268,6 +289,7 @@ void brubeck_http_endpoint_init(struct brubeck_server *server, const char *liste
 			NULL, NULL,
 			&handle_request, server,
 			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int)10,
+			MHD_OPTION_SOCK_ADDR, (struct sockaddr *)(&saddr),
 			MHD_OPTION_END);
 
 	if (!daemon)
