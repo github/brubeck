@@ -1,9 +1,9 @@
 {
   "sharding" : false,
-  "server_name" : "graphite_brubeck",
-  "dumpfile" : "./brubeck.dump",
+  "server_name" : "brubeck.biz",
+  "dumpfile" : "./brubeck_biz.dump",
   "capacity" : 15,
-  "expire" : 20,
+  "expire" : 600,
   "http" : ":8090",
 
   "backends" : [
