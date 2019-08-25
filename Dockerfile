@@ -9,7 +9,7 @@ RUN ./script/cibuild
 
 # final stage
 FROM alpine
-RUN apk add --no-cache openssl ca-certificates
+RUN apk add --no-cache jansson libmicrohttpd libressl
 WORKDIR /usr/sbin/
 COPY --from=build-env /tmp/brubeck/brubeck /usr/sbin/
 COPY --from=build-env /tmp/brubeck/debian/biz.json /tmp/brubeck/debian/tech.json /etc/brubeck/
