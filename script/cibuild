@@ -10,7 +10,7 @@ git submodule update --init
 (cd vendor/ck && git clean -dfx)
 
 echo "=> Testing @ $(date)"
-make test && ./brubeck_test
+make test
 
 echo "=> Building @ $(date)"
 make brubeck
