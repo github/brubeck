@@ -1,4 +1,6 @@
 brubeck
+brubeck_test
+*.deb
 *.o
 *.swp
 *~

@@ -1,13 +1,16 @@
 #!/bin/sh
 
 set -e
-ROOT=$(dirname "$0")/..
+ROOT=$(git rev-parse --show-toplevel)
+cd $ROOT
 
 echo "=> Cleaning @ $(date)"
 git clean -fdx
 git submodule update --init
+(cd vendor/ck && git clean -dfx)
+
+echo "=> Testing @ $(date)"
+make test && ./brubeck_test
 
 echo "=> Building @ $(date)"
-cd $ROOT
-
-make test && ./brubeck_test
+make brubeck
