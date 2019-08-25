@@ -1,0 +1,35 @@
+defaults: &defaults
+  working_directory: ~/app
+version: 2
+jobs:
+  release:
+    <<: *defaults
+    docker:
+      - image: circleci/buildpack-deps:xenial
+    steps:
+      - checkout
+      - run:
+          name: install env manager
+          command: git clone --depth 1 -b master git@github.com:fiverr/kubernetes.git /var/tmp/kubernetes
+      - setup_remote_docker:
+          reusable: true
+          exclusive: true
+      - run:
+          name: prepare docker version
+          command: /var/tmp/kubernetes/scripts/ci/create_version_name.sh
+      - run:
+          name: docker build
+          command: /var/tmp/kubernetes/scripts/ci/build_version.sh
+      - run:
+          name: docker push (create tag if master)
+          command: /var/tmp/kubernetes/scripts/ci/push_version.sh false
+workflows:
+  version: 2
+  ci-cd:
+    jobs:
+      - release:
+          filters:
+            branches:
+              only:
+                - master
+                - /.*_rc/
