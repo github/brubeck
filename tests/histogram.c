@@ -63,7 +63,7 @@ void test_histogram__single_element(void)
 	sput_fail_unless(sample.mean == 42.0, "sample.mean");
 	sput_fail_unless(sample.mean_90 == 42.0, "sample.mean_90");
 	sput_fail_unless(sample.count == 1, "sample.count");
-	sput_fail_unless(sample.count_90 == 0.9, "sample.count_90");
+	sput_fail_unless(sample.count_90 == 1.0, "sample.count_90");
 	sput_fail_unless(sample.sum == 42.0, "sample.sum");
 	sput_fail_unless(sample.sum_90 == 42.0, "sample.sum_90");
 	sput_fail_unless(sample.std == 0.0, "sample.std");
@@ -111,9 +111,9 @@ void test_histogram__multisamples(void)
 		sput_fail_unless(sample.mean == 64.5, "sample.mean");
 		sput_fail_unless(sample.mean_90 == 58.0, "sample.mean_90");
 		sput_fail_unless(sample.count == 128, "sample.count");
-		sput_fail_unless(sample.count_90 == 115.2, "sample.count_90");
+		sput_fail_unless(sample.count_90 == 115, "sample.count_90");
 		sput_fail_unless(sample.sum == 8256.0, "sample.sum");
-		sput_fail_unless(floor(sample.sum_90) == 6670, "sample.sum_90");
+		sput_fail_unless(sample.sum_90 == 6670, "sample.sum_90");
 		sput_fail_unless(floor(sample.std) == 36.0, "sample.std");
 		sput_fail_unless(sample.median == 64.0, "sample.median");
 	}
@@ -136,16 +136,16 @@ void test_histogram__with_sample_rate(void)
 	brubeck_histo_sample(&sample, &h);
 
 	sput_fail_unless(sample.lower == 1.0, "sample.lower");
-        sput_fail_unless(sample.upper == 128.0, "sample.upper");
-        sput_fail_unless(sample.upper_90 == 115.0, "sample.upper_90");
-        sput_fail_unless(sample.mean == 64.5, "sample.mean");
-        sput_fail_unless(sample.mean_90 == 58.0, "sample.mean_90");
-        sput_fail_unless(sample.count == 1280, "sample.count");
-        sput_fail_unless(sample.count_90 == 1152.0, "sample.count_90");
-        sput_fail_unless(sample.sum == 8256.0, "sample.sum");
-        sput_fail_unless(floor(sample.sum_90) == 6670, "sample.sum_90");
-        sput_fail_unless(floor(sample.std) == 36.0, "sample.std");
-        sput_fail_unless(sample.median == 64.0, "sample.median");
+	sput_fail_unless(sample.upper == 128.0, "sample.upper");
+	sput_fail_unless(sample.upper_90 == 115.0, "sample.upper_90");
+	sput_fail_unless(sample.mean == 64.5, "sample.mean");
+	sput_fail_unless(floor(sample.mean_90) == 57.0, "sample.mean_90");
+	sput_fail_unless(sample.count == 1280, "sample.count");
+	sput_fail_unless(sample.count_90 == 1152.0, "sample.count_90");
+	sput_fail_unless(sample.sum == 82560.0, "sample.sum");
+	sput_fail_unless(sample.sum_90 == 66700, "sample.sum_90");
+	sput_fail_unless(floor(sample.std) == 36.0, "sample.std");
+	sput_fail_unless(sample.median == 64.0, "sample.median");
 }
 
 void test_histogram__capacity(void)
