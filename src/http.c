@@ -130,7 +130,21 @@ send_stats(struct brubeck_server *brubeck)
 						"port", (int)ntohs(address->sin_port),
 						"sent", (json_int_t)carbon->sent
 				));
-		}
+		} else if (backend->type == BRUBECK_BACKEND_OPENTSDB) {
+                        struct brubeck_opentsdb *opentsdb = (struct brubeck_opentsdb *)backend;
+                        struct sockaddr_in *address = &opentsdb->out_sockaddr;
+                        char addr[INET_ADDRSTRLEN];
+
+                        json_array_append_new(backends,
+                                json_pack("{s:s, s:i, s:b, s:s, s:i, s:I}",
+                                        "type", "opentsdb",
+                                        "sample_freq", (int)opentsdb->backend.sample_freq,
+                                        "connected", (opentsdb->out_sock >= 0),
+                                        "address", inet_ntop(AF_INET, &address->sin_addr.s_addr, addr, INET_ADDRSTRLEN),
+                                        "port", (int)ntohs(address->sin_port),
+                                        "sent", (json_int_t)opentsdb->sent
+                                ));
+                }
 	}
 
 	samplers = json_array();
