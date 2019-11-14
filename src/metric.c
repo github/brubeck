@@ -64,7 +64,7 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	}
 	pthread_spin_unlock(&metric->lock);
 
-	sample(metric->key, value, opaque);
+	sample(metric->type, metric->key, value, opaque);
 }
 
 
@@ -98,7 +98,7 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	}
 	pthread_spin_unlock(&metric->lock);
 
-	sample(metric->key, value, opaque);
+	sample(metric->type, metric->key, value, opaque);
 }
 
 
@@ -140,7 +140,7 @@ counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *o
 	}
 	pthread_spin_unlock(&metric->lock);
 
-	sample(metric->key, value, opaque);
+	sample(metric->type, metric->key, value, opaque);
 }
 
 
@@ -179,7 +179,7 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 
 
 	WITH_SUFFIX(".count") {
-		sample(key, hsample.count, opaque);
+		sample(metric->type, key, hsample.count, opaque);
 	}
 
 	WITH_SUFFIX(".count_ps") {
@@ -193,43 +193,43 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 		return;
 
 	WITH_SUFFIX(".min") {
-		sample(key, hsample.min, opaque);
+		sample(metric->type, key, hsample.min, opaque);
 	}
 
 	WITH_SUFFIX(".max") {
-		sample(key, hsample.max, opaque);
+		sample(metric->type, key, hsample.max, opaque);
 	}
 
 	WITH_SUFFIX(".sum") {
-		sample(key, hsample.sum, opaque);
+		sample(metric->type, key, hsample.sum, opaque);
 	}
 
 	WITH_SUFFIX(".mean") {
-		sample(key, hsample.mean, opaque);
+		sample(metric->type, key, hsample.mean, opaque);
 	}
 
 	WITH_SUFFIX(".median") {
-		sample(key, hsample.median, opaque);
+		sample(metric->type, key, hsample.median, opaque);
 	}
 
 	WITH_SUFFIX(".percentile.75") {
-		sample(key, hsample.percentile[PC_75], opaque);
+		sample(metric->type, key, hsample.percentile[PC_75], opaque);
 	}
 
 	WITH_SUFFIX(".percentile.95") {
-		sample(key, hsample.percentile[PC_95], opaque);
+		sample(metric->type, key, hsample.percentile[PC_95], opaque);
 	}
 
 	WITH_SUFFIX(".percentile.98") {
-		sample(key, hsample.percentile[PC_98], opaque);
+		sample(metric->type, key, hsample.percentile[PC_98], opaque);
 	}
 
 	WITH_SUFFIX(".percentile.99") {
-		sample(key, hsample.percentile[PC_99], opaque);
+		sample(metric->type, key, hsample.percentile[PC_99], opaque);
 	}
 
 	WITH_SUFFIX(".percentile.999") {
-		sample(key, hsample.percentile[PC_999], opaque);
+		sample(metric->type, key, hsample.percentile[PC_999], opaque);
 	}
 }
 
