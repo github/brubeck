@@ -1,7 +1,11 @@
-# Brubeck
+# Brubeck (unmaintained)
 
 Brubeck is a [statsd](https://github.com/etsy/statsd)-compatible stats
-aggregator written in C.
+aggregator written in C. Brubeck is currently unmaintained.
+
+## List of known maintained forks
+
+- https://github.com/lukepalmer/brubeck-new
 
 ## What is statsd?
 
