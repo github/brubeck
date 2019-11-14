@@ -90,7 +90,11 @@ The configuration for Brubeck is loaded through a JSON file, passed on the comma
     ./brubeck --config=my.config.json
 
 If no configuration file is passed to the daemon, it will load `config.default.json`, which
-contains useful defaults for local development/testing.
+contains useful defaults for local development/testing. The configuration file also supports
+environment variable substitution when the BRUBECK_CONFIG_SUBSTITUTE_ENV environment variable
+is set. The syntax for environment variable substitution is similar to bash: ${MY_VAR} is
+replaced, verbatim, by the value of MY_VAR in the envionment. All environment variables
+referenced in this way must be present at runtime, or else Brubeck will fail to start.
 
 The JSON file can contain the following sections:
 

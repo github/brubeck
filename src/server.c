@@ -183,6 +183,95 @@ static char *get_config_name(const char *full_path)
 	return config_name;
 }
 
+static json_t *parse_config(const char *path, json_error_t *error)
+{
+	json_t *parsed;
+	ssize_t len;
+	char *buf;
+	FILE *fp;
+	const char *p;
+
+	/* only perform env var substitutions if configured to do so through the enviornment */
+	if (getenv("BRUBECK_CONFIG_SUBSTITUTE_ENV") == NULL) {
+		return json_load_file(path, 0, error);
+	}
+
+	fp = fopen(path, "r");
+	fseek(fp, 0, SEEK_END);
+	len = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	buf = malloc(len + 1);
+	if (!buf) {
+		die("malloc failed while parsing config file, %s (len %ld)", path, len);
+	}
+
+	/* read in the entire config. */
+	memset(buf, 0, len + 1);
+	const ssize_t r = fread(buf, len, 1, fp);
+	const int err = ferror(fp);
+	if (err) {
+		die("failed to read config file %s, read %ld bytes of %ld total, ferror: %d (%s)",
+		    path, r, len, err, strerror(err));
+	}
+
+	/* substitue environment variables matching the following syntax: ${MY_ENV_VAR} */
+	for (p = buf; buf != '\0'; ) {
+		const char *s = strstr(p, "${");
+		if (s == NULL) {
+			break;
+		}
+		const size_t prefix_len = s - buf;
+
+		const char *e = strstr(s, "}");
+		if (e == NULL) {
+			die("malformed environment substition syntax: "
+			    "no matching \"}\" after \"${\" in config file %s", path);
+		}
+
+		/* found replacement between `s` and `e`. extract the key. */
+		const size_t klen = e - (s + 2);
+		if (klen == 0) {
+			die("malformed environment substition syntax: "
+			    "no key found between brackets in config file %s", path);
+		}
+		char *k = strndup(s + 2, klen);
+
+		const char *v = getenv(k);
+		if (v == NULL) {
+			die("environment substition: no environment variable found for "
+			    "key \"%s\" in config %s", k, path);
+		}
+
+		const size_t vlen = strlen(v);
+		size_t newsize = prefix_len + vlen + strlen(e + 1) + 1;
+		char *newbuf = malloc(newsize);
+		if (!buf) {
+			die("realloc failed while parsing config file, %s (newsize %lu)",
+			    path, newsize);
+		}
+
+		/* copy in the old prefix, the new substitution, and the remaining suffix */
+		memcpy(newbuf, buf, prefix_len);
+		memcpy(newbuf + prefix_len, v, vlen);
+		memcpy(newbuf + prefix_len + vlen, e + 1, strlen(e + 1) + 1);
+		free(buf);
+
+		/* continue from the next byte after the previous prefix, and new value. */
+		buf = newbuf;
+		p = newbuf + prefix_len + vlen + 1;
+
+		log_splunk("replaced config %s with %s from environment", k, v);
+		free(k);
+	}
+
+	/* load as json, now that environment replacements are complete  */
+	parsed = json_loads(buf, 0, error);
+
+	fclose(fp);
+	free(buf);
+	return parsed;
+}
+
 static void load_config(struct brubeck_server *server, const char *path)
 {
 	json_error_t error;
@@ -198,7 +287,7 @@ static void load_config(struct brubeck_server *server, const char *path)
 	server->name = "brubeck";
 	server->config_name = get_config_name(path);
 	server->dump_path = NULL;
-	server->config = json_load_file(path, 0, &error);
+	server->config = parse_config(path, &error);
 	if (!server->config) {
 		die("failed to load config file, %s (%s:%d:%d)",
 				error.text, error.source, error.line, error.column);
