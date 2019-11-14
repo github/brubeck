@@ -51,9 +51,9 @@ static void statsd_run_recvmmsg(struct brubeck_statsd *statsd, int sock)
 		}
 
 		/* store stats */
-		brubeck_atomic_add(&statsd->sampler.inflow, SIM_PACKETS);
+		brubeck_atomic_add(&statsd->sampler.inflow, res);
 
-		for (i = 0; i < SIM_PACKETS; ++i) {
+		for (i = 0; i < res; ++i) {
 			char *buf = msgs[i].msg_hdr.msg_iov->iov_base;
 			char *end = buf + msgs[i].msg_len;
 			brubeck_statsd_packet_parse(server, buf, end);
