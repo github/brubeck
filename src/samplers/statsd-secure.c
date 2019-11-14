@@ -98,7 +98,7 @@ static void *statsd_secure__thread(void *_in)
 
 	char buffer[MAX_PACKET_SIZE];
 
-	HMAC_CTX ctx;
+	HMAC_CTX *ctx;
 	unsigned char hmac_buffer[SHA_SIZE];
 	unsigned int hmac_len;
 
@@ -108,8 +108,8 @@ static void *statsd_secure__thread(void *_in)
 
 	log_splunk("sampler=statsd-secure event=worker_online");
 
-	HMAC_CTX_init(&ctx);
-	HMAC_Init_ex(&ctx, statsd->hmac_key, strlen(statsd->hmac_key), SHA_FUNCTION(), NULL);
+	ctx = EVP_CIPHER_CTX_new();
+	HMAC_Init_ex(ctx, statsd->hmac_key, strlen(statsd->hmac_key), SHA_FUNCTION(), NULL);
 
 	for (;;) {
 		int res = recvfrom(statsd->sampler.in_sock, buffer,
@@ -133,9 +133,9 @@ static void *statsd_secure__thread(void *_in)
 			continue;
 		}
 
-		HMAC_Init_ex(&ctx, NULL, 0, NULL, NULL);
-		HMAC_Update(&ctx, (unsigned char *)buffer + SHA_SIZE, res - SHA_SIZE);
-		HMAC_Final(&ctx, hmac_buffer, &hmac_len);
+		HMAC_Init_ex(ctx, NULL, 0, NULL, NULL);
+		HMAC_Update(ctx, (unsigned char *)buffer + SHA_SIZE, res - SHA_SIZE);
+		HMAC_Final(ctx, hmac_buffer, &hmac_len);
 
 		if (memcmpct(buffer, hmac_buffer, SHA_SIZE) != 0) {
 			log_splunk("sampler=statsd-secure event=fail_auth hmac=%s", hmactos(buffer));
@@ -149,7 +149,7 @@ static void *statsd_secure__thread(void *_in)
 		brubeck_statsd_packet_parse(server, buffer + MIN_PACKET_SIZE, buffer + res);
 	}
 
-	HMAC_CTX_cleanup(&ctx);
+	HMAC_CTX_cleanup(ctx);
 	return NULL;
 }
 
