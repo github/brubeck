@@ -23,9 +23,8 @@ enum brubeck_aggregate_t {
 };
 
 enum {
-	BRUBECK_EXPIRE_DISABLED = 0,
-	BRUBECK_EXPIRE_INACTIVE = 1,
-	BRUBECK_EXPIRE_ACTIVE = 2
+	BRUBECK_STATE_INACTIVE = 0,
+	BRUBECK_STATE_ACTIVE = 1
 };
 
 struct brubeck_metric {
@@ -38,7 +37,7 @@ struct brubeck_metric {
 	pthread_spinlock_t lock;
 	uint16_t key_len;
 	uint8_t type;
-	uint8_t expire;
+	uint8_t state;
 
 	union {
 		struct {

@@ -3,7 +3,6 @@
   "server_name" : "brubeck_debug",
   "dumpfile" : "./brubeck.dump",
   "capacity" : 15,
-  "expire" : 20,
   "http" : ":8080",
 
   "backends" : [

@@ -64,16 +64,6 @@ update_proctitle(struct brubeck_server *server)
 }
 
 static void
-expire_metric(struct brubeck_metric *mt, void *_)
-{
-	/* If this metric is not disabled, turn "inactive"
-	 * into "disabled" and "active" into "inactive"
-	 */
-	if (mt->expire > BRUBECK_EXPIRE_DISABLED)
-		mt->expire = mt->expire - 1;
-}
-
-static void
 dump_metric(struct brubeck_metric *mt, void *out_file)
 {
 	static const char *METRIC_NAMES[] = {"g", "c", "C", "h", "ms", "internal"};
@@ -192,7 +182,6 @@ static void load_config(struct brubeck_server *server, const char *path)
 	json_t *backends, *samplers;
 
 	/* optional */
-	int expire = 0;
 	char *http = NULL;
 
 	server->name = "brubeck";
@@ -211,8 +200,7 @@ static void load_config(struct brubeck_server *server, const char *path)
 		"capacity", &capacity,
 		"backends", &backends,
 		"samplers", &samplers,
-		"http", &http,
-		"expire", &expire);
+		"http", &http);
 
 	gh_log_set_instance(server->name);
 
@@ -224,7 +212,6 @@ static void load_config(struct brubeck_server *server, const char *path)
 	load_samplers(server, samplers);
 
 	if (http) brubeck_http_endpoint_init(server, http);
-	if (expire) server->fd_expire = load_timerfd(expire);
 }
 
 void brubeck_server_init(struct brubeck_server *server, const char *config)
@@ -237,7 +224,6 @@ void brubeck_server_init(struct brubeck_server *server, const char *config)
 
 	server->fd_signal = load_signalfd();
 	server->fd_update = load_timerfd(1);
-	server->fd_expire = -1;
 
 	/* init the memory allocator */
 	brubeck_slab_init(&server->slab);
@@ -272,7 +258,7 @@ static int signal_triggered(struct pollfd *fd)
 
 int brubeck_server_run(struct brubeck_server *server)
 {
-	struct pollfd fds[3];
+	struct pollfd fds[2];
 	int nfd = 2;
 	size_t i;
 
@@ -284,11 +270,6 @@ int brubeck_server_run(struct brubeck_server *server)
 	fds[1].fd = server->fd_update;
 	fds[1].events = POLLIN;
 
-	if (server->fd_expire >= 0) {
-		fds[2].fd = server->fd_expire;
-		fds[2].events = POLLIN;
-		nfd++;
-	}
 
 	server->running = 1;
 	log_splunk("event=listening");
@@ -314,11 +295,6 @@ int brubeck_server_run(struct brubeck_server *server)
 		if (timer_elapsed(&fds[1])) {
 			update_flows(server);
 			update_proctitle(server);
-		}
-
-		if (timer_elapsed(&fds[2])) {
-			log_splunk("event=expire_metrics");
-			brubeck_hashtable_foreach(server->metrics, &expire_metric, NULL);
 		}
 	}
 

@@ -27,7 +27,6 @@ struct brubeck_server {
 	int active_samplers;
 
 	int fd_signal;
-	int fd_expire;
 	int fd_update;
 
 	struct brubeck_slab slab;

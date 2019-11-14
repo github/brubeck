@@ -15,7 +15,7 @@ new_metric(struct brubeck_server *server, const char *key, size_t key_len, uint8
 	metric->key[key_len] = '\0';
 	metric->key_len = (uint16_t)key_len;
 
-	metric->expire = BRUBECK_EXPIRE_ACTIVE;
+	metric->state = BRUBECK_STATE_ACTIVE;
 	metric->type = type;
 	pthread_spin_init(&metric->lock, PTHREAD_PROCESS_PRIVATE);
 
@@ -49,6 +49,7 @@ gauge__record(struct brubeck_metric *metric, value_t value, value_t sample_freq,
 		} else {
 			metric->as.gauge.value = value;
 		}
+		metric->state= BRUBECK_STATE_ACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -61,6 +62,7 @@ gauge__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	pthread_spin_lock(&metric->lock);
 	{
 		value = metric->as.gauge.value;
+		metric->state = BRUBECK_STATE_INACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 
@@ -82,6 +84,7 @@ meter__record(struct brubeck_metric *metric, value_t value, value_t sample_freq,
 	pthread_spin_lock(&metric->lock);
 	{
 		metric->as.meter.value += value;
+		metric->state= BRUBECK_STATE_ACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -95,6 +98,7 @@ meter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *opa
 	{
 		value = metric->as.meter.value;
 		metric->as.meter.value = 0.0;
+		metric->state = BRUBECK_STATE_INACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 
@@ -124,6 +128,7 @@ counter__record(struct brubeck_metric *metric, value_t value, value_t sample_fre
 		}
 
 		metric->as.counter.previous = value;
+		metric->state= BRUBECK_STATE_ACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -137,6 +142,7 @@ counter__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void *o
 	{
 		value = metric->as.counter.value;
 		metric->as.counter.value = 0.0;
+		metric->state = BRUBECK_STATE_INACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 
@@ -155,6 +161,7 @@ histogram__record(struct brubeck_metric *metric, value_t value, value_t sample_f
 	pthread_spin_lock(&metric->lock);
 	{
 		brubeck_histo_push(&metric->as.histogram, value, sample_freq);
+		metric->state= BRUBECK_STATE_ACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 }
@@ -168,6 +175,7 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 	pthread_spin_lock(&metric->lock);
 	{
 		brubeck_histo_sample(&hsample, &metric->as.histogram);
+		metric->state = BRUBECK_STATE_INACTIVE;
 	}
 	pthread_spin_unlock(&metric->lock);
 
@@ -186,11 +194,6 @@ histogram__sample(struct brubeck_metric *metric, brubeck_sample_cb sample, void 
 		struct brubeck_backend *backend = opaque;
 		sample(key, hsample.count / (double)backend->sample_freq, opaque);
 	}
-
-	/* if there have been no metrics during this sampling period,
-	 * we don't need to report any of the histogram samples */
-	if (hsample.count == 0.0)
-		return;
 
 	WITH_SUFFIX(".min") {
 		sample(key, hsample.min, opaque);
@@ -333,6 +336,5 @@ brubeck_metric_find(struct brubeck_server *server, const char *key, size_t key_l
 	brubeck_atomic_inc(&metric->flow);
 #endif
 
-	metric->expire = BRUBECK_EXPIRE_ACTIVE;
 	return metric;
 }
